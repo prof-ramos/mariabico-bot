@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  mariabicobot:
+    image: gabrielramos/mariabicobot:latest
+    container_name: mariabicobot
+    restart: unless-stopped
+
+    environment:
+      # Telegram
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ADMIN_TELEGRAM_USER_ID=${ADMIN_TELEGRAM_USER_ID}
+      - TARGET_GROUP_ID=${TARGET_GROUP_ID}
+
+      # Shopee
+      - SHOPEE_APP_ID=${SHOPEE_APP_ID}
+      - SHOPEE_SECRET=${SHOPEE_SECRET}
+
+      # Config
+      - TZ=America/Sao_Paulo
+      - LOG_LEVEL=INFO
+      - DB_PATH=/data/mariabico.db
+
+      # Scheduler
+      - SCHEDULE_CRON=0 */12 * * *
+
+    volumes:
+      - mariabicobot_data:/data
+
+    networks:
+      - ProfRamosNet
+
+    labels:
+      # Traefik (webhook futuro)
+      - "traefik.enable=false"  # MVP usa polling
+      # Para webhook na Fase 2:
+      # - "traefik.enable=true"
+      # - "traefik.http.routers.mariabicobot.rule=Host(`mariabicobot.proframos.com`) && PathPrefix(`/webhook`)"
+      # - "traefik.http.routers.mariabicobot.tls=true"
+      # - "traefik.http.routers.mariabicobot.tls.certresolver=letsencrypt"
+
+networks:
+  ProfRamosNet:
+    external: true
+
+volumes:
+  mariabicobot_data:
+    driver: local
