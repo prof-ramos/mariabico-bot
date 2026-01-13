@@ -1,40 +1,35 @@
 """Cliente HTTP para Shopee Affiliate API."""
+
 import asyncio
+import json
 from typing import Any
 
 import httpx
 
 from .auth import get_auth_headers
 from .queries import (
-    GENERATE_SHORT_LINK_QUERY,
     PRODUCT_OFFER_V2_QUERY,
     build_product_offer_variables,
-    build_short_link_variables,
+    get_short_link_query,
 )
+from src.utils.logger import get_logger
 
-# Endpoint da API Shopee
+logger = get_logger("mariabicobot", "shopee_client")
+
 SHOPEE_API_URL = "https://open-api.affiliate.shopee.com.br/graphql"
-
-# Timeout padrão (segundos)
-DEFAULT_TIMEOUT = 10.0
-
-# Máximo de tentativas
-MAX_RETRIES = 3
-
-# Delays para retry (segundos)
-RETRY_DELAYS = [1.0, 2.0, 4.0]
+RETRY_DELAYS = [1, 2, 4]
 
 
 class ShopeeAPIError(Exception):
-    """Erro na API Shopee."""
+    """Erro retornado pela API da Shopee."""
 
-    def __init__(self, message: str, code: str | None = None):
+    def __init__(self, message: str, code: str = None):
         super().__init__(message)
         self.code = code
 
 
 class ShopeeClient:
-    """Cliente para Shopee Affiliate API."""
+    """Cliente para Shopee Affiliate GraphQL API."""
 
     def __init__(self, app_id: str, secret: str):
         """Inicializa o cliente.
@@ -45,36 +40,18 @@ class ShopeeClient:
         """
         self.app_id = app_id
         self.secret = secret
-        self._client: httpx.AsyncClient | None = None
+        self.client = httpx.AsyncClient(timeout=30.0)
 
-    @property
-    def client(self) -> httpx.AsyncClient:
-        """Retorna o cliente HTTP (lazy initialization)."""
-        if self._client is None:
-            self._client = httpx.AsyncClient(timeout=DEFAULT_TIMEOUT)
-        return self._client
+    async def close(self):
+        """Fecha a sessão do cliente."""
+        await self.client.aclose()
 
-    async def close(self) -> None:
-        """Fecha o cliente HTTP."""
-        if self._client:
-            await self._client.aclose()
-            self._client = None
+    async def _request(self, query: str, variables: dict = None) -> dict:
+        """Executa uma requisição GraphQL."""
+        payload_dict = {"query": query, "variables": variables or {}}
+        payload_json = json.dumps(payload_dict, separators=(",", ":"), sort_keys=True)
 
-    async def _request(self, query: str, variables: dict) -> dict:
-        """Faz uma requisição GraphQL com retry.
-
-        Args:
-            query: Query GraphQL
-            variables: Variáveis da query
-
-        Returns:
-            Resposta da API como dicionário
-
-        Raises:
-            ShopeeAPIError: Em caso de erro na API
-        """
-        payload = {"query": query, "variables": variables}
-        headers = get_auth_headers(self.app_id, self.secret, query)
+        headers = get_auth_headers(self.app_id, self.secret, payload_json)
 
         last_error = None
 
@@ -82,22 +59,31 @@ class ShopeeClient:
             try:
                 response = await self.client.post(
                     SHOPEE_API_URL,
-                    json=payload,
+                    content=payload_json,
                     headers=headers,
                 )
                 response.raise_for_status()
-
                 data = response.json()
 
-                # Verifica erros da API
                 if "errors" in data:
                     error = data["errors"][0]
-                    raise ShopeeAPIError(error.get("message", "Unknown API error"), error.get("code"))
+                    message = error.get("message", "Erro desconhecido")
+                    code = str(error.get("extensions", {}).get("code", ""))
+
+                    # Se for erro de auth, tenta de novo
+                    if code == "10020" and attempt < len(RETRY_DELAYS) - 1:
+                        logger.warning(
+                            f"Erro de autenticação (tentativa {attempt + 1}), tentando novamente..."
+                        )
+                        continue
+
+                    raise ShopeeAPIError(f"GraphQL Error: {message}", code=code)
 
                 return data
 
             except (httpx.HTTPError, ShopeeAPIError) as e:
                 last_error = e
+                logger.warning(f"Erro na requisição (tentativa {attempt + 1}): {e}")
                 if attempt < len(RETRY_DELAYS) - 1:
                     await asyncio.sleep(delay)
 
@@ -109,27 +95,15 @@ class ShopeeClient:
         limit: int = 50,
         page: int = 1,
         categories: list[int] | None = None,
-        list_type: str = "hot",
+        sort_type: int = 2,
     ) -> list[dict]:
-        """Busca produtos via productOfferV2.
-
-        Args:
-            keywords: Lista de keywords para buscar
-            limit: Limite de itens por página (max 50)
-            page: Número da página
-            categories: Lista de IDs de categorias (opcional)
-            list_type: Tipo de lista ("hot", "new", etc)
-
-        Returns:
-            Lista de produtos (dicionários)
-
-        Raises:
-            ShopeeAPIError: Em caso de erro na API
-        """
-        variables = build_product_offer_variables(keywords, limit, page, categories, list_type)
+        """Busca produtos via productOfferV2."""
+        variables = build_product_offer_variables(
+            keywords, limit, page, categories, sort_type
+        )
         data = await self._request(PRODUCT_OFFER_V2_QUERY, variables)
 
-        nodes = data["data"]["productOfferV2"]["nodes"]
+        nodes = data.get("data", {}).get("productOfferV2", {}).get("nodes", [])
         return nodes
 
     async def generate_short_link(
@@ -137,26 +111,16 @@ class ShopeeClient:
         origin_url: str,
         sub_ids: list[str],
     ) -> str:
-        """Gera um short link rastreável.
+        """Gera um short link rastreável."""
+        # Usa query construída dinamicamente para evitar problemas de tipos de input
+        query = get_short_link_query(origin_url, sub_ids)
 
-        Args:
-            origin_url: URL original do produto Shopee
-            sub_ids: Lista de subIds para rastreamento (max 5)
+        # Variáveis vazias pois os valores já estão na query string
+        data = await self._request(query, variables={})
 
-        Returns:
-            Short link (ex: https://shope.ee/abc123)
+        result = data.get("data", {}).get("generateShortLink", {})
 
-        Raises:
-            ShopeeAPIError: Em caso de erro na API
-        """
-        variables = build_short_link_variables(origin_url, sub_ids)
-        data = await self._request(GENERATE_SHORT_LINK_QUERY, variables)
-
-        result = data["data"]["generateShortLink"]
-
-        # Verifica erro na mutation
-        if result.get("error"):
-            error = result["error"]
-            raise ShopeeAPIError(error["message"], error["code"])
+        if not result or not result.get("shortLink"):
+            raise ShopeeAPIError("Falha ao gerar short link: API não retornou o link.")
 
         return result["shortLink"]

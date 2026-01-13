@@ -1,6 +1,7 @@
 # MariaBicoBot 🤖
 
-Bot de Telegram para curadoria automática de produtos Shopee Afiliados com geração de links rastreáveis.
+Bot de Telegram para curadoria automática de produtos Shopee Afiliados com geração de links
+rastreáveis.
 
 ## 📋 Funcionalidades
 
@@ -69,22 +70,23 @@ docker run -d \
 
 ### Menu Principal
 
-```
+```text
 /start ou /menu - Abre o menu interativo
 ```
 
 **Opções disponíveis:**
 
-| Botão | Descrição |
-|-------|-----------|
-| 🤖 Curadoria Agora | Executa curadoria imediata |
-| 🔗 Converter Link | Converte link Shopee manualmente |
-| 📊 Status | Mostra estatísticas do sistema |
-| ⚙️ Ajuda | Exibe mensagem de ajuda |
+| Botão              | Descrição                        |
+| ------------------ | -------------------------------- |
+| 🤖 Curadoria Agora | Executa curadoria imediata       |
+| 🔗 Converter Link  | Converte link Shopee manualmente |
+| 📊 Status          | Mostra estatísticas do sistema   |
+| ⚙️ Ajuda           | Exibe mensagem de ajuda          |
 
 ### Exemplo de Fluxo
 
 1. **Curadoria Automática**
+
    - Bot executa automaticamente a cada 12h
    - Busca produtos, filtra, ranqueia e envia Top 10 no grupo
    - Produtos são marcados para evitar duplicatas
@@ -96,7 +98,7 @@ docker run -d \
 
 ## 🏗️ Arquitetura
 
-```
+```text
 mariabico-bot/
 ├── src/
 │   ├── main.py              # Entry point
@@ -143,7 +145,7 @@ ScoreWeights(
 Ajuste no `docker-compose.yml`:
 
 ```yaml
-SCHEDULE_CRON=0 */12 * * *  # A cada 12h
+SCHEDULE_CRON=0 */12 * * * # A cada 12h
 ```
 
 ## 📊 Métricas
@@ -207,6 +209,7 @@ Aumente `dedup_days` em `src/core/curator.py` ou limpe a tabela `sent_messages`.
 ## 📈 Roadmap
 
 ### Fase 1 (MVP) ✅
+
 - [x] Curadoria automática
 - [x] Geração de links rastreáveis
 - [x] Conversão manual
@@ -214,12 +217,14 @@ Aumente `dedup_days` em `src/core/curator.py` ou limpe a tabela `sent_messages`.
 - [x] Status dashboard
 
 ### Fase 2 (Configuração Dinâmica)
+
 - [ ] Configuração via comandos `/config`
 - [ ] Integração com `conversionReport`
 - [ ] Webhook mode (Traefik)
 - [ ] Multi-grupos
 
 ### Fase 3 (Analytics)
+
 - [ ] Feed público JSON/HTML
 - [ ] Relatórios automáticos
 - [ ] Painel web administrativo
@@ -234,5 +239,4 @@ Gabriel Ramos
 
 ---
 
-**Versão**: 1.0.0
-**Status**: MVP
+**Versão**: 1.0.0 **Status**: MVP

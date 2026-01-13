@@ -1,9 +1,15 @@
 """Lógica de curadoria de produtos."""
+
 from typing import Optional
 
 from src.core.deduplicator import Deduplicator
 from src.core.link_gen import LinkGenerator
-from src.core.scoring import FilterThresholds, ScoreWeights, passes_filters, rank_products
+from src.core.scoring import (
+    FilterThresholds,
+    ScoreWeights,
+    passes_filters,
+    rank_products,
+)
 from src.database import Database
 from src.shopee import ShopeeClient
 from src.utils.logger import get_logger
@@ -27,20 +33,7 @@ class Curator:
         weights: Optional[ScoreWeights] = None,
         thresholds: Optional[FilterThresholds] = None,
     ):
-        """Inicializa o curador.
-
-        Args:
-            shopee_client: Cliente da API Shopee
-            db: Instância do banco de dados
-            group_id: ID do grupo Telegram
-            group_hash: Hash curto do group_id
-            top_n: Quantidade de produtos a retornar
-            max_pages: Máximo de páginas a buscar
-            page_limit: Itens por página
-            dedup_days: Dias para deduplicação
-            weights: Pesos para cálculo de score
-            thresholds: Thresholds para filtragem
-        """
+        """Inicializa o curador."""
         self.shopee = shopee_client
         self.db = db
         self.group_id = group_id
@@ -54,20 +47,50 @@ class Curator:
         self.deduplicator = Deduplicator(db, dedup_days)
         self.link_gen = LinkGenerator(shopee_client, db, group_hash)
 
+    def _normalize_offer(self, offer: dict, keyword: str = "") -> dict:
+        """Normaliza campos da oferta para o padrão do bot."""
+        # Campos da API productOfferV2 -> Padrão interno
+        # Mapping conforme docs.md e response real
+
+        name = offer.get("productName", "")
+        # priceMin é string na API productOfferV2
+        price_str = offer.get("priceMin", "0")
+        try:
+            price = float(price_str)
+        except (ValueError, TypeError):
+            price = 0.0
+
+        discount = offer.get("priceDiscountRate", 0)
+
+        # commissionRate vem como "0.11" (string) na productOfferV2
+        rate_str = offer.get("commissionRate", "0")
+        try:
+            rate = float(rate_str)
+        except (ValueError, TypeError):
+            rate = 0.0
+
+        commission = price * rate
+
+        normalized = {
+            "itemId": str(offer.get("itemId", "0")),
+            "productName": name,
+            "priceMin": price,
+            "priceDiscountRate": discount,
+            "commissionRate": rate,
+            "commission": round(commission, 2),
+            "originUrl": offer.get("productLink", offer.get("offerLink", "")),
+            "imageUrl": offer.get("imageUrl", ""),
+            "rating": float(offer.get("ratingStar", "0") or 0),
+            "keyword": keyword,
+        }
+        return normalized
+
     async def fetch_products(
         self,
         keywords: list[str],
         categories: Optional[list[int]] = None,
     ) -> list[dict]:
-        """Busca produtos na API Shopee.
-
-        Args:
-            keywords: Lista de keywords para buscar
-            categories: Lista de categorias (opcional)
-
-        Returns:
-            Lista de produtos buscados
-        """
+        """Busca produtos na API Shopee."""
         all_products = []
 
         for keyword in keywords:
@@ -75,23 +98,23 @@ class Curator:
 
             for page in range(1, self.max_pages + 1):
                 try:
-                    products = await self.shopee.search_products(
+                    offers = await self.shopee.search_products(
                         keywords=[keyword],
                         limit=self.page_limit,
                         page=page,
                         categories=categories,
                     )
 
-                    if not products:
+                    if not offers:
                         logger.info(f"Página {page} vazia para keyword '{keyword}'")
                         break
 
-                    # Adiciona keyword aos produtos
-                    for p in products:
-                        p["keyword"] = keyword
+                    # Normaliza e adiciona keyword
+                    for o in offers:
+                        norm = self._normalize_offer(o, keyword)
+                        all_products.append(norm)
 
-                    all_products.extend(products)
-                    logger.info(f"Buscou {len(products)} produtos (página {page})")
+                    logger.info(f"Buscou {len(offers)} produtos (página {page})")
 
                 except Exception as e:
                     logger.error(f"Erro ao buscar página {page} para '{keyword}': {e}")
@@ -100,14 +123,7 @@ class Curator:
         return all_products
 
     def filter_products(self, products: list[dict]) -> tuple[list[dict], dict]:
-        """Filtra produtos por thresholds.
-
-        Args:
-            products: Lista de produtos
-
-        Returns:
-            Tupla (produtos filtrados, estatísticas)
-        """
+        """Filtra produtos por thresholds."""
         filtered = []
         stats = {
             "total": len(products),
@@ -115,8 +131,6 @@ class Curator:
             "failed_commission": 0,
             "failed_discount": 0,
             "failed_price": 0,
-            "failed_sales": 0,
-            "failed_rating": 0,
         }
 
         for product in products:
@@ -124,24 +138,23 @@ class Curator:
                 filtered.append(product)
                 stats["passed_filters"] += 1
             else:
-                # Conta qual filtro falhou
-                commission_rate = product.get("commissionRate", 0) or 0
-                commission_brl = product.get("commission", 0) or 0
-                discount = product.get("priceDiscountRate", 0) or 0
-                price = product.get("priceMin", 0) or 0
-                sales = product.get("sales", 0) or 0
-                rating = product.get("rating", 0) or 0
+                comm = product.get("commission", 0)
+                rate = product.get("commissionRate", 0)
+                discount = product.get("priceDiscountRate", 0)
+                price = product.get("priceMin", 0)
 
-                if commission_rate < self.thresholds.commission_rate_min or commission_brl < self.thresholds.commission_min_brl:
+                if (
+                    rate < self.thresholds.commission_rate_min
+                    or comm < self.thresholds.commission_min_brl
+                ):
                     stats["failed_commission"] += 1
                 elif discount < self.thresholds.discount_min_pct:
                     stats["failed_discount"] += 1
-                elif self.thresholds.price_max_brl and price > self.thresholds.price_max_brl:
+                elif (
+                    self.thresholds.price_max_brl
+                    and price > self.thresholds.price_max_brl
+                ):
                     stats["failed_price"] += 1
-                elif self.thresholds.sales_min > 0 and sales < self.thresholds.sales_min:
-                    stats["failed_sales"] += 1
-                elif self.thresholds.rating_min > 0 and rating < self.thresholds.rating_min:
-                    stats["failed_rating"] += 1
 
         logger.info(
             f"Filtragem: {stats['passed_filters']}/{stats['total']} aprovados, "
@@ -152,25 +165,11 @@ class Curator:
         return filtered, stats
 
     def deduplicate_products(self, products: list[dict]) -> list[dict]:
-        """Remove produtos já enviados recentemente.
-
-        Args:
-            products: Lista de produtos
-
-        Returns:
-            Lista de produtos não duplicados
-        """
+        """Remove produtos já enviados recentemente."""
         return self.deduplicator.filter_duplicates(products, self.group_id)
 
     async def generate_links(self, products: list[dict]) -> list[dict]:
-        """Gera short links para produtos.
-
-        Args:
-            products: Lista de produtos
-
-        Returns:
-            Lista com campo 'shortLink' adicionado
-        """
+        """Gera short links para produtos."""
         return await self.link_gen.generate_batch(products, campaign_type="curadoria")
 
     async def curate(
@@ -178,21 +177,7 @@ class Curator:
         keywords: list[str],
         categories: Optional[list[int]] = None,
     ) -> dict:
-        """Executa curadoria completa.
-
-        Args:
-            keywords: Lista de keywords para buscar
-            categories: Lista de categorias (opcional)
-
-        Returns:
-            Dicionário com resultados da curadoria:
-            - fetched: Total buscado
-            - approved: Total aprovado nos filtros
-            - after_dedup: Total após deduplicação
-            - final: Top N final
-            - products: Lista de produtos selecionados
-            - stats: Estatísticas detalhadas
-        """
+        """Executa curadoria completa."""
         # 1. Busca
         logger.info(f"Iniciando curadoria: keywords={keywords}")
         fetched = await self.fetch_products(keywords, categories)

@@ -1,4 +1,5 @@
 """Handlers para comandos e callbacks do bot."""
+
 from datetime import datetime
 from typing import Optional
 
@@ -40,7 +41,12 @@ async def is_authorized(user_id: int) -> bool:
         True se autorizado
     """
     settings = get_settings()
-    return user_id == settings.admin_telegram_user_id
+    is_auth = user_id == settings.admin_telegram_user_id
+    if not is_auth:
+        logger.warning(
+            f"Unauthorized access attempt: {user_id} (Admin is {settings.admin_telegram_user_id})"
+        )
+    return is_auth
 
 
 async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -50,11 +56,20 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         update: Update do Telegram
         context: Contexto do bot
     """
-    if not update.message or not await is_authorized(update.effective_user.id):
+    if not update.message:
+        return
+
+    logger.info(
+        f"Recebido {update.message.text} de {update.effective_user.id} no chat {update.effective_chat.id}"
+    )
+
+    if not await is_authorized(update.effective_user.id):
         return
 
     text = (
-        "🤖 <b>MariaBicoBot</b>\n" "Bot de Curadoria Shopee Afiliados\n\n" "Escolha uma opção:"
+        "🤖 <b>MariaBicoBot</b>\n"
+        "Bot de Curadoria Shopee Afiliados\n\n"
+        "Escolha uma opção:"
     )
 
     await update.message.reply_text(
@@ -97,7 +112,9 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await query.answer()
 
     text = (
-        "🤖 <b>MariaBicoBot</b>\n" "Bot de Curadoria Shopee Afiliados\n\n" "Escolha uma opção:"
+        "🤖 <b>MariaBicoBot</b>\n"
+        "Bot de Curadoria Shopee Afiliados\n\n"
+        "Escolha uma opção:"
     )
 
     await query.edit_message_text(
@@ -163,7 +180,9 @@ async def status_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
 
 
-async def curate_now_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def curate_now_callback(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """Callback para botão de curadoria imediata.
 
     Args:
@@ -274,7 +293,9 @@ async def convert_link_start(update: Update, context: ContextTypes.DEFAULT_TYPE)
     return AWAITING_LINK
 
 
-async def convert_link_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def convert_link_message(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Processa link enviado pelo usuário.
 
     Args:
@@ -331,24 +352,32 @@ async def convert_link_message(update: Update, context: ContextTypes.DEFAULT_TYP
         keyboard = back_to_menu_keyboard()
 
         await msg.edit_text(
-            f"✅ <b>Link convertido com sucesso!</b>\n\n" f"🔗 {short_link}\n\n" f"📋 Copie e compartilhe!",
+            f"✅ <b>Link convertido com sucesso!</b>\n\n"
+            f"🔗 {short_link}\n\n"
+            f"📋 Copie e compartilhe!",
             parse_mode="HTML",
             reply_markup=keyboard,
         )
 
-        logger.info(f"Link convertido para usuário {update.effective_user.id}: {normalized_url[:50]}")
+        logger.info(
+            f"Link convertido para usuário {update.effective_user.id}: {normalized_url[:50]}"
+        )
 
     except Exception as e:
         logger.error(f"Erro ao converter link: {e}")
         await msg.edit_text(
-            f"⚠️ <b>Erro ao gerar link</b>\n\n" f"Detalhes: {escape_html(str(e))}\n\n" f"Tente novamente em instantes.",
+            f"⚠️ <b>Erro ao gerar link</b>\n\n"
+            f"Detalhes: {escape_html(str(e))}\n\n"
+            f"Tente novamente em instantes.",
             parse_mode="HTML",
         )
 
     return ConversationHandler.END
 
 
-async def convert_link_timeout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def convert_link_timeout(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Handler para timeout da conversação.
 
     Args:

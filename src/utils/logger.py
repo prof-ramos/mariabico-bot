@@ -63,7 +63,10 @@ def setup_logger(
         return logging.LoggerAdapter(logger, {"component": component})
 
     # Configura nível
-    log_level = getattr(logging, level.upper(), logging.INFO)
+    if isinstance(level, str):
+        log_level = getattr(logging, level.upper(), logging.INFO)
+    else:
+        log_level = level
     logger.setLevel(log_level)
 
     # Handler para stdout

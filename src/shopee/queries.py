@@ -1,41 +1,29 @@
 """Queries GraphQL da Shopee Affiliate API."""
 
+import json
+
 # Query para buscar produtos (productOfferV2)
+# Mantemos variáveis aqui pois types básicos (String, Int) são conhecidos e funcionaram
 PRODUCT_OFFER_V2_QUERY = """
-query ProductOfferV2($request: ProductSearchRequest!) {
-  productOfferV2(request: $request) {
+query ($keyword: String, $sortType: Int, $page: Int, $limit: Int) {
+  productOfferV2(keyword: $keyword, sortType: $sortType, page: $page, limit: $limit) {
     nodes {
       itemId
       productName
       productLink
-      originUrl
       priceMin
-      priceMax
       priceDiscountRate
-      commission
       commissionRate
-      shopName
+      commission
       sales
-      rating
+      ratingStar
       imageUrl
+      offerLink
     }
     pageInfo {
       page
       limit
       hasNextPage
-    }
-  }
-}
-"""
-
-# Mutation para gerar short link
-GENERATE_SHORT_LINK_QUERY = """
-mutation GenerateShortLink($request: GenerateShortLinkRequest!) {
-  generateShortLink(request: $request) {
-    shortLink
-    error {
-      code
-      message
     }
   }
 }
@@ -47,46 +35,37 @@ def build_product_offer_variables(
     limit: int = 50,
     page: int = 1,
     categories: list[int] | None = None,
-    list_type: str = "hot",
+    sort_type: int = 2,
 ) -> dict:
-    """Constrói variáveis para query productOfferV2.
+    """Constrói variáveis para query productOfferV2."""
+    keyword_str = " ".join(keywords) if isinstance(keywords, list) else keywords
 
-    Args:
-        keywords: Lista de keywords para buscar
-        limit: Limite de itens por página
-        page: Número da página
-        categories: Lista de IDs de categorias (opcional)
-        list_type: Tipo de lista ("hot", "new", etc)
-
-    Returns:
-        Dicionário com variáveis para a query
-    """
-    request: dict = {
-        "keywords": keywords,
-        "limit": limit,
-        "page": page,
-        "listType": list_type,
-    }
-
-    if categories:
-        request["productCatId"] = categories
-
-    return {"request": request}
-
-
-def build_short_link_variables(origin_url: str, sub_ids: list[str]) -> dict:
-    """Constrói variáveis para mutation generateShortLink.
-
-    Args:
-        origin_url: URL original do produto Shopee
-        sub_ids: Lista de subIds para rastreamento (max 5)
-
-    Returns:
-        Dicionário com variáveis para a mutation
-    """
     return {
-        "request": {
-            "originUrl": origin_url,
-            "subIds": sub_ids[:5],  # Max 5 subIds
-        }
+        "keyword": keyword_str,
+        "sortType": sort_type,
+        "page": page,
+        "limit": limit,
     }
+
+
+def get_short_link_query(origin_url: str, sub_ids: list[str]) -> str:
+    """Gera a mutation generateShortLink com argumentos inline.
+
+    Isso evita erros de "Unknown Type" para o input object, já que a documentação
+    não deixa claro se o type é GenerateShortLinkRequest ou GenerateShortLinkInput.
+    """
+    # Garante que inputs sejam strings JSON válidas
+    url_json = json.dumps(origin_url)
+    sub_ids_json = json.dumps(sub_ids[:5])
+
+    # Monta a mutation com input object literal
+    return f"""
+    mutation {{
+      generateShortLink(input: {{
+        originUrl: {url_json},
+        subIds: {sub_ids_json}
+      }}) {{
+        shortLink
+      }}
+    }}
+    """

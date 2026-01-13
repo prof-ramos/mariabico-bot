@@ -1,0 +1,283 @@
+# Pipeline CI/CD para MariaBicoBot com orquestração inteligente de testes
+
+name: Test Suite
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Tipo de teste'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - smoke
+          - unit
+          - integration
+          - all
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ============================================================================
+  # FASE 1: Smoke Tests (críticos, executam primeiro)
+  # ============================================================================
+  smoke:
+    name: 🔥 Smoke Tests (Críticos)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run smoke tests
+        run: |
+          pytest -m smoke -v --tb=short --json-report --json-report-file=smoke-report.json
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results
+          path: smoke-report.json
+
+  # ============================================================================
+  # FASE 2: Unit Tests (paralelos, rápidos)
+  # ============================================================================
+  unit:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: smoke  # Só executa se smoke passar
+
+    strategy:
+      matrix:
+        shard: [1, 2]  # Divide testes em 2 shards para paralelização
+      fail-fast: false  # Continua mesmo se um shard falhar
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run unit tests (shard ${{ matrix.shard }})
+        run: |
+          pytest -m "unit and not slow" \
+            -v \
+            --tb=short \
+            --cov=src \
+            --cov-report=xml:coverage-${{ matrix.shard }}.xml \
+            --cov-report=term-missing:skip-covered \
+            --numprocesses=auto \
+            --dist=loadscope \
+            --shard-id=${{ matrix.shard }} \
+            --num-shards=2
+
+      - name: Upload coverage shard ${{ matrix.shard }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-shard-${{ matrix.shard }}
+          path: coverage-${{ matrix.shard }}.xml
+
+  # ============================================================================
+  # FASE 3: Integration Tests
+  # ============================================================================
+  integration:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: smoke
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run integration tests (sem API real)
+        run: |
+          pytest -m "integration and not shopee_api and not slow" \
+            -v \
+            --tb=short \
+            --asyncio-mode=auto
+
+      - name: Run integration tests com API real (se disponível)
+        if: env.SHOPEE_APP_ID != ''
+        env:
+          SHOPEE_APP_ID: ${{ secrets.SHOPEE_APP_ID }}
+          SHOPEE_SECRET: ${{ secrets.SHOPEE_SECRET }}
+        run: |
+          pytest -m "shopee_api" -v --tb=short
+        continue-on-error: true  # Não falha o pipeline se API falhar
+
+  # ============================================================================
+  # FASE 4: Relatórios e Cobertura
+  # ============================================================================
+  coverage:
+    name: 📊 Coverage Report
+    runs-on: ubuntu-latest
+    needs: [unit, integration]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-shard-*
+          path: coverage
+
+      - name: Merge coverage reports
+        run: |
+          pip install coverage
+          coverage combine coverage/coverage-*.xml
+          coverage xml -o coverage.xml
+          coverage report --fail-under=70
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 70
+          MINIMUM_ORANGE: 50
+
+  # ============================================================================
+  # FASE 5: Security Scan (opcional)
+  # ============================================================================
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+
+      - name: Run Bandit security linter
+        run: bandit -r src/ -f json -o bandit-report.json
+        continue-on-error: true
+
+      - name: Check dependencies for vulnerabilities
+        run: safety check --json --output safety-report.json
+        continue-on-error: true
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+
+  # ============================================================================
+  # FASE 6: Build e Teste de Docker
+  # ============================================================================
+  docker:
+    name: 🐳 Docker Build Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: smoke
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: gabrielramos/mariabicobot:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker container
+        run: |
+          docker run --rm \
+            -e TELEGRAM_BOT_TOKEN=test \
+            -e ADMIN_TELEGRAM_USER_ID=123 \
+            -e TARGET_GROUP_ID=-100123 \
+            -e SHOPEE_APP_ID=123 \
+            -e SHOPEE_SECRET=test \
+            gabrielramos/mariabicobot:test \
+            python -c "import src; print('OK')"
+
+  # ============================================================================
+  # RESUMO DO PIPELINE
+  # ============================================================================
+  summary:
+    name: 📋 Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [smoke, unit, integration, docker]
+    if: always()
+
+    steps:
+      - name: Check results
+        run: |
+          echo "## Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Tests | ${{ needs.smoke.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build | ${{ needs.docker.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if critical jobs failed
+        if: needs.smoke.result == 'failure' || needs.unit.result == 'failure'
+        run: exit 1
