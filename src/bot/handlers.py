@@ -1,5 +1,6 @@
 """Handlers para comandos e callbacks do bot."""
 
+import zoneinfo
 from datetime import datetime, timedelta
 
 from telegram import Update
@@ -35,7 +36,7 @@ def is_authorized(user_id: int) -> bool:
     if str(user_id) == str(settings.admin_telegram_user_id):
         return True
 
-    logger.warning(f"Acesso não autorizado: {user_id}")
+    logger.warning("Tentativa de acesso não autorizado detectada")
     return False
 
 
@@ -393,7 +394,9 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await _generate_report(query.message, context, is_callback=True)
 
 
-async def _generate_report(message, context: ContextTypes.DEFAULT_TYPE, is_callback: bool) -> None:
+async def _generate_report(
+    message, context: ContextTypes.DEFAULT_TYPE, *, is_callback: bool
+) -> None:
     """Gera e envia o relatório.
 
     Args:
@@ -407,8 +410,10 @@ async def _generate_report(message, context: ContextTypes.DEFAULT_TYPE, is_callb
             await message.edit_text("⚠️ Sistema Shopee indisponível")
             return
 
-        # Período: últimos 7 dias
-        end_date = datetime.now()
+        # Período: últimos 7 dias (usa timezone configurado)
+        settings = config.get_settings()
+        tz = zoneinfo.ZoneInfo(settings.tz)
+        end_date = datetime.now(tz)
         start_date = end_date - timedelta(days=7)
 
         # Timestamps em segundos
@@ -423,7 +428,7 @@ async def _generate_report(message, context: ContextTypes.DEFAULT_TYPE, is_callb
 
         while has_more:
             report = await shopee.get_conversion_report(
-                start_timestamp=start_ts, end_timestamp=end_ts, limit=500, cursor=cursor
+                start_timestamp=start_ts, end_timestamp=end_ts, limit=500, scroll_id=cursor
             )
 
             batch_nodes = report.get("data", {}).get("conversionReport", {}).get("nodes", [])
@@ -480,7 +485,7 @@ async def _generate_report(message, context: ContextTypes.DEFAULT_TYPE, is_callb
         await message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
     except Exception as e:
-        logger.error(f"Erro ao gerar relatório: {e}")
+        logger.exception("Erro ao gerar relatório")
         await message.edit_text(
             f"❌ Erro ao gerar relatório: {escape_html(str(e))}",
             reply_markup=back_to_menu_keyboard() if is_callback else None,

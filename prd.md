@@ -55,7 +55,6 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 | **Deduplication Accuracy**  | 0 duplicatas | Por batch/período configurado | Por execução |
 | **Time-to-Market**         | < 5min    | Da execução até publicação no grupo | Por curadoria |
 | **Sistema Uptime**         | >= 99.5%  | Container health status  | Semanal    |
-| **Sistema Uptime**         | >= 99.5%  | Container health status  | Semanal    |
 
 ### Métricas Operacionais (Logs)
 

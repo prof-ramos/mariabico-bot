@@ -84,7 +84,7 @@ SCHEDULE_CRON="0 */12 * * *" # Cron para curadoria automática
 
 ## 3. Estrutura do Projeto
 
-```
+```text
 mariabico-bot/
 ├── src/
 │   ├── bot/          # Handlers, keyboards e lógica do Telegram

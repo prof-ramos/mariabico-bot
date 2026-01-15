@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.shopee import ShopeeClient
+from src.shopee import ShopeeAPIError
 from src.shopee.auth import get_auth_headers
 
 
@@ -172,7 +173,7 @@ class TestShopeeAPIIntegration:
                 origin_url=origin_url,
                 sub_ids=["tg", "test", "manual"],
             )
-        except Exception as e:
+        except (ShopeeAPIError, RuntimeError) as e:
             pytest.xfail(f"External API error: {e}")
 
         assert short_link.startswith("https://shope.ee/")

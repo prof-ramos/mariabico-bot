@@ -117,9 +117,9 @@ def build_product_offer_variables(
         "sortType": sort_type,
     }
 
-    if category_id:
+    if category_id is not None:
         variables["categoryId"] = category_id
-    if shop_id:
+    if shop_id is not None:
         variables["shopId"] = shop_id
 
     return variables
