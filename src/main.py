@@ -203,9 +203,15 @@ async def init_application() -> Application:
 
     # Callback handlers
     application.add_handler(CallbackQueryHandler(menu_callback, pattern=f"^{CallbackData.MENU}$"))
-    application.add_handler(CallbackQueryHandler(status_callback, pattern=f"^{CallbackData.STATUS}$"))
-    application.add_handler(CallbackQueryHandler(report_callback, pattern=f"^{CallbackData.REPORT}$"))
-    application.add_handler(CallbackQueryHandler(curate_now_callback, pattern=f"^{CallbackData.CURATE_NOW}$"))
+    application.add_handler(
+        CallbackQueryHandler(status_callback, pattern=f"^{CallbackData.STATUS}$")
+    )
+    application.add_handler(
+        CallbackQueryHandler(report_callback, pattern=f"^{CallbackData.REPORT}$")
+    )
+    application.add_handler(
+        CallbackQueryHandler(curate_now_callback, pattern=f"^{CallbackData.CURATE_NOW}$")
+    )
     application.add_handler(CallbackQueryHandler(help_callback, pattern=f"^{CallbackData.HELP}$"))
 
     # Conversação de conversão de link

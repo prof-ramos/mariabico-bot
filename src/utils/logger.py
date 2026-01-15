@@ -1,4 +1,5 @@
 """Logging estruturado em JSON para o MariaBicoBot."""
+
 import json
 import logging
 import sys

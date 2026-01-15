@@ -1,4 +1,5 @@
 """Schema SQL do MariaBicoBot."""
+
 import sqlite3
 
 # SQL para criar as tabelas

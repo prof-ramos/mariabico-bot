@@ -1051,7 +1051,7 @@ CREATE INDEX idx_runs_started ON runs(started_at DESC);
 
 ### Endpoint Base
 
-```
+```text
 https://open-api.affiliate.shopee.com.br/graphql
 ```
 
@@ -1059,7 +1059,7 @@ https://open-api.affiliate.shopee.com.br/graphql
 
 **Header**:
 
-```
+```http
 Authorization: SHA256 Credential={AppId}, Timestamp={Timestamp}, Signature={Signature}
 ```
 

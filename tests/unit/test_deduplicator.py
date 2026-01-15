@@ -37,13 +37,15 @@ class TestDeduplicator:
         group_id = "-1001234567890"
 
         # Primeiro insere o produto em products_seen (FK requirement)
-        db.upsert_product({
-            "itemId": str(item_id),
-            "productName": "Produto Teste",
-            "priceMin": 100.0,
-            "priceDiscountRate": 10,
-            "commissionRate": 0.08,
-        })
+        db.upsert_product(
+            {
+                "itemId": str(item_id),
+                "productName": "Produto Teste",
+                "priceMin": 100.0,
+                "priceDiscountRate": 10,
+                "commissionRate": 0.08,
+            }
+        )
 
         # Marca como enviado
         db.mark_as_sent(item_id, group_id, "https://test.link", "batch1")
@@ -61,13 +63,15 @@ class TestDeduplicator:
         group_id = "-1001234567890"
 
         # Primeiro insere o produto em products_seen (FK requirement)
-        db.upsert_product({
-            "itemId": str(item_id),
-            "productName": "Produto Teste",
-            "priceMin": 100.0,
-            "priceDiscountRate": 10,
-            "commissionRate": 0.08,
-        })
+        db.upsert_product(
+            {
+                "itemId": str(item_id),
+                "productName": "Produto Teste",
+                "priceMin": 100.0,
+                "priceDiscountRate": 10,
+                "commissionRate": 0.08,
+            }
+        )
 
         # Marca como enviado há 10 dias
         old_timestamp = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")
@@ -90,13 +94,15 @@ class TestDeduplicator:
         group_id = "-1001234567890"
 
         # Primeiro insere o produto em products_seen (FK requirement)
-        db.upsert_product({
-            "itemId": "2",
-            "productName": "Produto 2",
-            "priceMin": 50.0,
-            "priceDiscountRate": 10,
-            "commissionRate": 0.08,
-        })
+        db.upsert_product(
+            {
+                "itemId": "2",
+                "productName": "Produto 2",
+                "priceMin": 50.0,
+                "priceDiscountRate": 10,
+                "commissionRate": 0.08,
+            }
+        )
 
         # Marca produto 2 como enviado
         db.mark_as_sent(2, group_id, "https://test.link", "batch1")
@@ -150,13 +156,15 @@ class TestDeduplicator:
         batch_id = "test_batch"
 
         # Primeiro insere o produto em products_seen (FK requirement)
-        db.upsert_product({
-            "itemId": str(item_id),
-            "productName": "Produto Teste",
-            "priceMin": 100.0,
-            "priceDiscountRate": 10,
-            "commissionRate": 0.08,
-        })
+        db.upsert_product(
+            {
+                "itemId": str(item_id),
+                "productName": "Produto Teste",
+                "priceMin": 100.0,
+                "priceDiscountRate": 10,
+                "commissionRate": 0.08,
+            }
+        )
 
         dedup.mark_sent(item_id, group_id, short_link, batch_id)
 
@@ -175,13 +183,15 @@ class TestDeduplicator:
         assert dedup.is_duplicate(item_id, group_id) is False
 
         # Primeiro insere o produto em products_seen (FK requirement)
-        db.upsert_product({
-            "itemId": str(item_id),
-            "productName": "Produto Teste",
-            "priceMin": 100.0,
-            "priceDiscountRate": 10,
-            "commissionRate": 0.08,
-        })
+        db.upsert_product(
+            {
+                "itemId": str(item_id),
+                "productName": "Produto Teste",
+                "priceMin": 100.0,
+                "priceDiscountRate": 10,
+                "commissionRate": 0.08,
+            }
+        )
 
         # Marca como enviado
         dedup.mark_sent(item_id, group_id, "https://test.link", "batch1")

@@ -434,15 +434,13 @@ async def _generate_report(
             batch_nodes = report.get("data", {}).get("conversionReport", {}).get("nodes", [])
             nodes.extend(batch_nodes)
 
-            # Verifica se há mais dados
-            if len(batch_nodes) < 500:
+            # Verifica se há mais dados via pageInfo
+            page_info = report.get("data", {}).get("conversionReport", {}).get("pageInfo", {})
+            if not page_info.get("hasNextPage", False):
                 has_more = False
             else:
-                # Tenta obter cursor da última página
-                if len(batch_nodes) > 0:
-                    last_node = batch_nodes[-1]
-                    cursor = last_node.get("scrollId")
-                else:
+                cursor = page_info.get("scrollId")
+                if not cursor:
                     has_more = False
 
         # Agrega dados em memória

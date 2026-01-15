@@ -1,4 +1,5 @@
 """Deduplicação de produtos já enviados."""
+
 from src.database import Database
 from src.utils.logger import get_logger
 

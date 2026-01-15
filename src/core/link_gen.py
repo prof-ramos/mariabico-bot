@@ -101,9 +101,7 @@ class LinkGenerator:
         sub_ids = build_sub_ids(campaign_type, self.group_hash, tag=tag)
 
         # Chama API
-        logger.info(
-            f"Gerando short link para {origin_url[:50]}... com sub_ids={sub_ids}"
-        )
+        logger.info(f"Gerando short link para {origin_url[:50]}... com sub_ids={sub_ids}")
         short_link = await self.shopee.generate_short_link(origin_url, sub_ids)
 
         # Salva no cache
@@ -138,9 +136,7 @@ class LinkGenerator:
                 short_link = await self.generate(origin_url, campaign_type, tag)
                 product["shortLink"] = short_link
             except Exception as e:
-                logger.error(
-                    f"Erro ao gerar link para produto {product.get('itemId')}: {e}"
-                )
+                logger.error(f"Erro ao gerar link para produto {product.get('itemId')}: {e}")
                 product["shortLink"] = origin_url  # Fallback
 
         return products

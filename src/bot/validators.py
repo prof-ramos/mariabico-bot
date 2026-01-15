@@ -1,13 +1,11 @@
 """Validadores para inputs do bot."""
+
 import html
 import re
 from urllib.parse import urlparse
 
 # Padrão de URL Shopee válido
-SHOPEE_URL_PATTERN = re.compile(
-    r"^(https?://)?(www\.)?(shopee\.com\.br|shope\.ee)/",
-    re.IGNORECASE
-)
+SHOPEE_URL_PATTERN = re.compile(r"^(https?://)?(www\.)?(shopee\.com\.br|shope\.ee)/", re.IGNORECASE)
 
 
 def is_valid_shopee_url(url: str) -> bool:

@@ -53,9 +53,7 @@ def calculate_score(
     price = product.get("priceMin", 0) or 0
 
     score = (
-        (commission * weights.commission)
-        + (discount * weights.discount)
-        - (price * weights.price)
+        (commission * weights.commission) + (discount * weights.discount) - (price * weights.price)
     )
 
     return round(score, 2)
@@ -87,18 +85,14 @@ def passes_filters(
     # Desconto
     discount = product.get("priceDiscountRate", 0) or 0
     if discount < thresholds.discount_min_pct:
-        logger.debug(
-            f"Produto reprovado: discount {discount}% < {thresholds.discount_min_pct}%"
-        )
+        logger.debug(f"Produto reprovado: discount {discount}% < {thresholds.discount_min_pct}%")
         return False
 
     # Preço máximo (se configurado)
     price = product.get("priceMin", 0) or 0
     if thresholds.price_max_brl is not None:
         if price > thresholds.price_max_brl:
-            logger.debug(
-                f"Produto reprovado: price R${price} > R${thresholds.price_max_brl}"
-            )
+            logger.debug(f"Produto reprovado: price R${price} > R${thresholds.price_max_brl}")
             return False
 
     return True

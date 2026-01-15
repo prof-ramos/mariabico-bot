@@ -1,4 +1,5 @@
 """Models e funções de acesso ao banco de dados."""
+
 import json
 import sqlite3
 from dataclasses import dataclass

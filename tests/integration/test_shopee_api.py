@@ -101,8 +101,6 @@ class TestShopeeClientUnit:
     @pytest.mark.unit
     async def test_generate_short_link_api_error(self):
         """Lida com erro da API ao gerar link."""
-        from src.shopee import ShopeeAPIError
-
         with patch.object(ShopeeClient, "_request") as mock_request:
             mock_request.return_value = {"data": {"generateShortLink": None}}
 
@@ -139,8 +137,6 @@ class TestShopeeAPIIntegration:
     @pytest.mark.asyncio
     async def test_real_api_search_products(self, real_client):
         """Busca produtos reais na API."""
-        from src.shopee import ShopeeAPIError
-
         try:
             products = await real_client.search_products(
                 keywords=["fone bluetooth"],
@@ -214,8 +210,6 @@ class TestShopeeAPIErrors:
     @pytest.mark.unit
     async def test_error_invalid_signature(self):
         """Simula erro de assinatura inválida (10020)."""
-        from src.shopee import ShopeeAPIError
-
         client = ShopeeClient("wrong", "credentials")
 
         with patch.object(client.client, "post", new_callable=AsyncMock) as mock_post:
@@ -239,8 +233,6 @@ class TestShopeeAPIErrors:
     @pytest.mark.unit
     async def test_error_rate_limit(self):
         """Simula erro de rate limit (10030)."""
-        from src.shopee import ShopeeAPIError
-
         client = ShopeeClient("123", "secret")
 
         with patch.object(client.client, "post", new_callable=AsyncMock) as mock_post:
