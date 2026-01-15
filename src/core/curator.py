@@ -1,7 +1,5 @@
 """Lógica de curadoria de produtos."""
 
-from typing import Optional
-
 from src.core.deduplicator import Deduplicator
 from src.core.link_gen import LinkGenerator
 from src.core.scoring import (
@@ -30,8 +28,8 @@ class Curator:
         max_pages: int = 5,
         page_limit: int = 50,
         dedup_days: int = 7,
-        weights: Optional[ScoreWeights] = None,
-        thresholds: Optional[FilterThresholds] = None,
+        weights: ScoreWeights | None = None,
+        thresholds: FilterThresholds | None = None,
     ):
         """Inicializa o curador."""
         self.shopee = shopee_client
@@ -50,37 +48,48 @@ class Curator:
     def _normalize_offer(self, offer: dict, keyword: str = "") -> dict:
         """Normaliza campos da oferta para o padrão do bot."""
         # Campos da API productOfferV2 -> Padrão interno
-        # Mapping conforme docs.md e response real
 
         name = offer.get("productName", "")
-        # priceMin é string na API productOfferV2
+        # priceMin pode vir como string ou número
         price_str = offer.get("priceMin", "0")
         try:
             price = float(price_str)
         except (ValueError, TypeError):
             price = 0.0
 
-        discount = offer.get("priceDiscountRate", 0)
-
-        # commissionRate vem como "0.11" (string) na productOfferV2
+        # commissionRate vem como string ou número na productOfferV2
         rate_str = offer.get("commissionRate", "0")
         try:
+            # Pode vir como "0.1" ou 0.1
             rate = float(rate_str)
         except (ValueError, TypeError):
             rate = 0.0
 
-        commission = price * rate
+        # commission as vezes já vem calculado na API
+        commission = offer.get("commission")
+        if commission is None:
+            commission = price * rate
+        else:
+            try:
+                commission = float(commission)
+            except (ValueError, TypeError):
+                commission = price * rate
+
+        # Tratar avaliação
+        try:
+            rating = float(offer.get("ratingStar", "0") or 0)
+        except (ValueError, TypeError):
+            rating = 0.0
 
         normalized = {
             "itemId": str(offer.get("itemId", "0")),
             "productName": name,
             "priceMin": price,
-            "priceDiscountRate": discount,
             "commissionRate": rate,
             "commission": round(commission, 2),
-            "originUrl": offer.get("productLink", offer.get("offerLink", "")),
+            "originUrl": offer.get("offerLink", ""),
             "imageUrl": offer.get("imageUrl", ""),
-            "rating": float(offer.get("ratingStar", "0") or 0),
+            "rating": rating,
             "keyword": keyword,
         }
         return normalized
@@ -88,7 +97,7 @@ class Curator:
     async def fetch_products(
         self,
         keywords: list[str],
-        categories: Optional[list[int]] = None,
+        categories: list[int] | None = None,
     ) -> list[dict]:
         """Busca produtos na API Shopee."""
         all_products = []
@@ -98,11 +107,14 @@ class Curator:
 
             for page in range(1, self.max_pages + 1):
                 try:
+                    # Resolve categoria (API aceita uma por vez)
+                    cat_id = categories[0] if categories else None
+
                     offers = await self.shopee.search_products(
                         keywords=[keyword],
                         limit=self.page_limit,
                         page=page,
-                        categories=categories,
+                        category_id=cat_id,
                     )
 
                     if not offers:
@@ -150,10 +162,7 @@ class Curator:
                     stats["failed_commission"] += 1
                 elif discount < self.thresholds.discount_min_pct:
                     stats["failed_discount"] += 1
-                elif (
-                    self.thresholds.price_max_brl
-                    and price > self.thresholds.price_max_brl
-                ):
+                elif self.thresholds.price_max_brl and price > self.thresholds.price_max_brl:
                     stats["failed_price"] += 1
 
         logger.info(
@@ -175,7 +184,7 @@ class Curator:
     async def curate(
         self,
         keywords: list[str],
-        categories: Optional[list[int]] = None,
+        categories: list[int] | None = None,
     ) -> dict:
         """Executa curadoria completa."""
         # 1. Busca

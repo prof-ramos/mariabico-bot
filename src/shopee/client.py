@@ -2,13 +2,14 @@
 
 import asyncio
 import json
-from typing import Any
 
 import httpx
 
 from .auth import get_auth_headers
 from .queries import (
+    CONVERSION_REPORT_QUERY,
     PRODUCT_OFFER_V2_QUERY,
+    VALIDATED_REPORT_QUERY,
     build_product_offer_variables,
     get_short_link_query,
 )
@@ -91,20 +92,81 @@ class ShopeeClient:
 
     async def search_products(
         self,
-        keywords: list[str],
+        keywords: list[str] | str,
         limit: int = 50,
         page: int = 1,
-        categories: list[int] | None = None,
-        sort_type: int = 2,
+        category_id: int | None = None,
+        shop_id: int | None = None,
+        list_type: int = 1,
+        sort_type: int = 5,
     ) -> list[dict]:
         """Busca produtos via productOfferV2."""
         variables = build_product_offer_variables(
-            keywords, limit, page, categories, sort_type
+            keywords, limit, page, category_id, shop_id, list_type, sort_type
         )
         data = await self._request(PRODUCT_OFFER_V2_QUERY, variables)
 
         nodes = data.get("data", {}).get("productOfferV2", {}).get("nodes", [])
         return nodes
+
+    async def _fetch_report(
+        self,
+        query: str,
+        start_timestamp: int,
+        end_timestamp: int,
+        page: int = 1,
+        limit: int = 500,
+        scroll_id: str | None = None,
+    ) -> dict:
+        """Método genérico para buscar relatórios.
+
+        Args:
+            query: Query GraphQL a ser executada
+            start_timestamp: Timestamp inicial em segundos
+            end_timestamp: Timestamp final em segundos
+            page: Número da página (padrão: 1)
+            limit: Limite de itens por página (padrão: 500)
+            scroll_id: ID de scroll para paginação (opcional)
+
+        Returns:
+            dict: Resposta da API com os dados do relatório
+        """
+        variables = {
+            "start": start_timestamp,
+            "end": end_timestamp,
+            "page": page,
+            "limit": limit,
+        }
+        if scroll_id:
+            variables["scrollId"] = scroll_id
+
+        return await self._request(query, variables)
+
+    async def get_conversion_report(
+        self,
+        start_timestamp: int,
+        end_timestamp: int,
+        page: int = 1,
+        limit: int = 500,
+        scroll_id: str | None = None,
+    ) -> dict:
+        """Busca relatório de conversão."""
+        return await self._fetch_report(
+            CONVERSION_REPORT_QUERY, start_timestamp, end_timestamp, page, limit, scroll_id
+        )
+
+    async def get_validated_report(
+        self,
+        start_timestamp: int,
+        end_timestamp: int,
+        page: int = 1,
+        limit: int = 500,
+        scroll_id: str | None = None,
+    ) -> dict:
+        """Busca relatório de pedidos validados."""
+        return await self._fetch_report(
+            VALIDATED_REPORT_QUERY, start_timestamp, end_timestamp, page, limit, scroll_id
+        )
 
     async def generate_short_link(
         self,

@@ -1,4 +1,5 @@
 """Autenticação SHA256 para Shopee Affiliate API."""
+
 import hashlib
 import time
 

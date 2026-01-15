@@ -1,4 +1,5 @@
 """Entry point do MariaBicoBot."""
+
 import asyncio
 import signal
 import sys
@@ -6,7 +7,6 @@ from datetime import datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from telegram import Update
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -21,16 +21,17 @@ from src.bot.handlers import (
     AWAITING_LINK,
     convert_link_message,
     convert_link_start,
-    convert_link_timeout,
     curate_now_callback,
     help_callback,
     help_command,
     menu_callback,
     menu_command,
+    report_callback,
+    report_command,
     status_callback,
 )
 from src.bot.keyboards import CallbackData
-from src.config import get_settings, reload_settings
+from src.config import get_settings
 from src.core import Curator, ScoreWeights
 from src.database import Database, init_db
 from src.shopee import ShopeeClient
@@ -187,11 +188,7 @@ async def init_application() -> Application:
 
     # Cria aplicação Telegram
     logger.info("Inicializando bot Telegram...")
-    application = (
-        Application.builder()
-        .token(settings.telegram_bot_token)
-        .build()
-    )
+    application = Application.builder().token(settings.telegram_bot_token).build()
 
     # Armazena dependências no bot_data
     application.bot_data["db"] = db
@@ -202,11 +199,19 @@ async def init_application() -> Application:
     application.add_handler(CommandHandler("start", menu_command))
     application.add_handler(CommandHandler("menu", menu_command))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("relatorio", report_command))
 
     # Callback handlers
     application.add_handler(CallbackQueryHandler(menu_callback, pattern=f"^{CallbackData.MENU}$"))
-    application.add_handler(CallbackQueryHandler(status_callback, pattern=f"^{CallbackData.STATUS}$"))
-    application.add_handler(CallbackQueryHandler(curate_now_callback, pattern=f"^{CallbackData.CURATE_NOW}$"))
+    application.add_handler(
+        CallbackQueryHandler(status_callback, pattern=f"^{CallbackData.STATUS}$")
+    )
+    application.add_handler(
+        CallbackQueryHandler(report_callback, pattern=f"^{CallbackData.REPORT}$")
+    )
+    application.add_handler(
+        CallbackQueryHandler(curate_now_callback, pattern=f"^{CallbackData.CURATE_NOW}$")
+    )
     application.add_handler(CallbackQueryHandler(help_callback, pattern=f"^{CallbackData.HELP}$"))
 
     # Conversação de conversão de link

@@ -10,10 +10,10 @@ import pytest
 from src.core.scoring import (
     FilterThresholds,
     ScoreWeights,
+    _get_commission,
     calculate_score,
     passes_filters,
     rank_products,
-    _get_commission,
 )
 
 

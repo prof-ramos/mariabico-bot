@@ -1,4 +1,5 @@
 """Keyboards (InlineKeyboardMarkup) para o bot."""
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
@@ -9,6 +10,7 @@ class CallbackData:
     MENU = "menu"
     CURATE_NOW = "curate_now"
     CONVERT_LINK = "convert_link"
+    REPORT = "report"
     STATUS = "status"
     HELP = "help"
 
@@ -22,6 +24,9 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton("📊 Status", callback_data=CallbackData.STATUS),
+            InlineKeyboardButton("💸 Relatório", callback_data=CallbackData.REPORT),
+        ],
+        [
             InlineKeyboardButton("⚙️ Ajuda", callback_data=CallbackData.HELP),
         ],
     ]

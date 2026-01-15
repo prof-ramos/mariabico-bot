@@ -1,9 +1,9 @@
 """Logging estruturado em JSON para o MariaBicoBot."""
+
 import json
 import logging
 import sys
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 # Componentes do sistema
 COMPONENTS = [
@@ -24,7 +24,7 @@ class JSONFormatter(logging.Formatter):
         """Formata o log record como JSON."""
         # Usa UTC para timestamp consistente
         log_data = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "level": record.levelname,
             "component": getattr(record, "component", "unknown"),
             "message": record.getMessage(),

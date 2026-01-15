@@ -2,11 +2,12 @@
 
 ## Resumo da Implementação
 
-Foi implementada uma estratégia completa de testes com orquestração inteligente para o projeto MariaBicoBot, incluindo:
+Foi implementada uma estratégia completa de testes com orquestração inteligente para o projeto
+MariaBicoBot, incluindo:
 
 ### 1. Estrutura de Testes Criada
 
-```
+```text
 tests/
 ├── conftest.py                  # Configuração centralizada + fixtures
 ├── README.md                    # Documentação completa
@@ -24,17 +25,18 @@ tests/
 
 ### 2. Resultados Atuais
 
-| Tipo | Status | Quantidade |
-|------|--------|------------|
-| **Unitários** | ✅ Passando | 60/60 |
-| **Integração** | ⚠️ Parcial | ~30/42 |
-| **Smoke (críticos)** | ✅ Passando | 20/20 |
+| Tipo                 | Status      | Quantidade |
+| :------------------- | :---------- | :--------- |
+| **Unitários**        | ✅ Passando | 60/60      |
+| **Integração**       | ⚠️ Parcial  | ~30/42     |
+| **Smoke (críticos)** | ✅ Passando | 20/20      |
 
 ### 3. Componentes de Orquestração Implementados
 
 #### 3.1 Configuração Pytest (`tests/conftest.py`)
 
-- **Marcadores registrados**: `smoke`, `unit`, `integration`, `slow`, `shopee_api`, `telegram`, `database`
+- **Marcadores registrados**: `smoke`, `unit`, `integration`, `slow`, `shopee_api`, `telegram`,
+  `database`
 - **Classificação automática**: Testes ordenados por criticidade
 - **Fixtures compartilhadas**: 15+ fixtures reutilizáveis
 - **Relatórios personalizados**: Duração, categoria, performance
@@ -81,20 +83,21 @@ make count-tests         # Conta total de testes
 
 ### 5. Arquivos de Configuração Criados
 
-| Arquivo | Propósito |
-|---------|-----------|
-| `pytest.ini` | Configuração pytest (marcadores, cobertura, asyncio) |
-| `pyproject.toml` | Configuração moderna do projeto + pytest |
-| `Makefile` | Comandos de orquestração |
-| `.github/workflows/tests.yml` | Pipeline CI/CD |
-| `requirements.txt` | Dependências + dev |
-| `tests/README.md` | Documentação de testes |
+| Arquivo                       | Propósito                                            |
+| :---------------------------- | :--------------------------------------------------- |
+| `pytest.ini`                  | Configuração pytest (marcadores, cobertura, asyncio) |
+| `pyproject.toml`              | Configuração moderna do projeto + pytest             |
+| `Makefile`                    | Comandos de orquestração                             |
+| `.github/workflows/tests.yml` | Pipeline CI/CD                                       |
+| `requirements.txt`            | Dependências + dev                                   |
+| `tests/README.md`             | Documentação de testes                               |
 
 ### 6. Cobertura de Código
 
 **Cobertura atual**: ~30% (baseline estabelecido)
 
 **Cobertura por módulo**:
+
 - `scoring.py`: ~80% (bem coberto)
 - `link_gen.py`: ~70% (bem coberto)
 - `auth.py`: ~50% (bem coberto)
@@ -131,6 +134,7 @@ Os testes de `test_telegram_handlers.py` têm erros devido a:
 #### 8.2 Aumentar Cobertura
 
 Priorizar:
+
 - `src/main.py` (0% - entry point complexo)
 - `src/bot/handlers.py` (20% - lógica core)
 - `src/shopee/client.py` (30% - API integration)
@@ -138,6 +142,7 @@ Priorizar:
 #### 8.3 Testes E2E
 
 Adicionar testes end-to-end:
+
 - Fluxo completo de curadoria
 - Conversão de link
 - Envio para grupo
@@ -145,23 +150,24 @@ Adicionar testes end-to-end:
 #### 8.4 Performance
 
 Adicionar:
+
 - Testes de carga
 - Testes de stress
 - Benchmarking de funções críticas
 
 ### 9. Boas Práticas Implementadas
 
-✅ Testes isolados e independentes
-✅ Nomes descritivos (`test_[oque]_[quando]_[entao]`)
-✅ Fixtures reutilizáveis
-✅ Mock de dependências externas
-✅ Testes rápidos (< 5s cada)
-✅ Cobertura de casos de borda
-✅ Documentação inline
+- ✅ Testes isolados e independentes
+- ✅ Nomes descritivos (`test_[oque]_[quando]_[entao]`)
+- ✅ Fixtures reutilizáveis
+- ✅ Mock de dependências externas
+- ✅ Testes rápidos (< 5s cada)
+- ✅ Cobertura de casos de borda
+- ✅ Documentação inline
 
 ### 10. Estatísticas Finais
 
-```
+```text
 Total de testes: 96
 ├── Unitários: 60 (✅ 100% passando)
 ├── Integração: 36 (⚠️ ~80% passando)
@@ -184,4 +190,5 @@ A estratégia de testes foi implementada com sucesso, fornecendo:
 4. **Documentação completa** para desenvolvedores
 5. **Cobertura baseline** para medição de progresso
 
-Os testes unitários estão 100% funcionais e podem ser usados como base para desenvolvimento futuro. Os testes de integração precisam de ajustes menores nos mocks do Telegram.
+Os testes unitários estão 100% funcionais e podem ser usados como base para desenvolvimento futuro.
+Os testes de integração precisam de ajustes menores nos mocks do Telegram.

@@ -1,4 +1,5 @@
 """Lógica de negócio do MariaBicoBot."""
+
 from .curator import Curator
 from .deduplicator import Deduplicator
 from .link_gen import LinkGenerator, build_sub_ids

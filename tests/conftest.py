@@ -3,6 +3,9 @@
 import asyncio
 import os
 import sqlite3
+
+# Adiciona src ao path
+import sys
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
@@ -10,10 +13,6 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
-
-# Adiciona src ao path
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -22,36 +21,20 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # CONFIGURAÇÃO DE PARALELIZAÇÃO E ORQUESTRAÇÃO
 # ============================================================================
 
+
 def pytest_configure(config):
     """Configura hooks personalizados do pytest."""
     config.addinivalue_line(
-        "markers",
-        "unit: Testes unitários (rápidos, isolados, sem dependências externas)"
+        "markers", "unit: Testes unitários (rápidos, isolados, sem dependências externas)"
     )
     config.addinivalue_line(
-        "markers",
-        "integration: Testes de integração (requer recursos externos)"
+        "markers", "integration: Testes de integração (requer recursos externos)"
     )
-    config.addinivalue_line(
-        "markers",
-        "slow: Testes lentos (devem ser executados separadamente)"
-    )
-    config.addinivalue_line(
-        "markers",
-        "shopee_api: Testes que chamam API Shopee real"
-    )
-    config.addinivalue_line(
-        "markers",
-        "telegram: Testes relacionados ao Telegram"
-    )
-    config.addinivalue_line(
-        "markers",
-        "database: Testes que acessam banco de dados"
-    )
-    config.addinivalue_line(
-        "markers",
-        "smoke: Testes críticos de smoke (executam primeiro)"
-    )
+    config.addinivalue_line("markers", "slow: Testes lentos (devem ser executados separadamente)")
+    config.addinivalue_line("markers", "shopee_api: Testes que chamam API Shopee real")
+    config.addinivalue_line("markers", "telegram: Testes relacionados ao Telegram")
+    config.addinivalue_line("markers", "database: Testes que acessam banco de dados")
+    config.addinivalue_line("markers", "smoke: Testes críticos de smoke (executam primeiro)")
 
 
 @pytest.fixture(scope="session")
@@ -66,6 +49,7 @@ def event_loop_policy() -> Any:
 # FIXTURES DE BANCO DE DADOS
 # ============================================================================
 
+
 @pytest.fixture(scope="function")
 def temp_db_path() -> Generator[str, None, None]:
     """Cria um banco SQLite temporário para testes."""
@@ -74,6 +58,7 @@ def temp_db_path() -> Generator[str, None, None]:
     try:
         # Inicializa schema
         from src.database import init_db
+
         init_db(path)
         yield path
     finally:
@@ -87,6 +72,7 @@ def temp_db_path() -> Generator[str, None, None]:
 def db(temp_db_path: str) -> Generator[Any, None, None]:
     """Fixture de banco de dados para testes."""
     from src.database import Database
+
     database = Database(temp_db_path)
     yield database
     database.close()
@@ -106,6 +92,7 @@ def db_conn(temp_db_path: str) -> Generator[sqlite3.Connection, None, None]:
 # ============================================================================
 # FIXTURES PARA SHEPEE API (MOCK)
 # ============================================================================
+
 
 @pytest.fixture(scope="function")
 def mock_shopee_response() -> dict:
@@ -134,11 +121,7 @@ def mock_shopee_response() -> dict:
                         "periodEndTime": 32503651199,
                     }
                 ],
-                "pageInfo": {
-                    "page": 1,
-                    "limit": 50,
-                    "hasNextPage": False
-                }
+                "pageInfo": {"page": 1, "limit": 50, "hasNextPage": False},
             }
         }
     }
@@ -188,7 +171,8 @@ def mock_shopee_response_product() -> dict:
 # FIXTURES PARA CONFIGURAÇÃO
 # ============================================================================
 
-@pytest.fixture(scope="function")
+
+@pytest.fixture(scope="function", autouse=True)
 def mock_settings():
     """Settings mockados para testes."""
     from src.config import Settings
@@ -196,7 +180,7 @@ def mock_settings():
     with patch.dict(
         os.environ,
         {
-            "TELEGRAM_BOT_TOKEN": "123456:ABCDEF",
+            "TELEGRAM_BOT_TOKEN": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123456",
             "ADMIN_TELEGRAM_USER_ID": "123456789",
             "TARGET_GROUP_ID": "-1001234567890",
             "SHOPEE_APP_ID": "123456",
@@ -208,13 +192,17 @@ def mock_settings():
         },
         clear=True,
     ):
-        yield Settings.from_env()
+        new_settings = Settings.from_env()
+
+        with patch("src.config.settings", new_settings):
+            yield new_settings
 
 
 @pytest.fixture(scope="function")
 def reset_settings():
     """Reseta settings singleton entre testes."""
     from src import config
+
     original_settings = config.settings
     config.settings = None
     yield
@@ -224,6 +212,7 @@ def reset_settings():
 # ============================================================================
 # FIXTURES PARA CURATOR
 # ============================================================================
+
 
 @pytest.fixture(scope="function")
 def curator(mock_shopee_client, db, reset_settings):
@@ -245,6 +234,7 @@ def curator(mock_shopee_client, db, reset_settings):
 # ============================================================================
 # FIXTURES PARA PRODUTOS
 # ============================================================================
+
 
 @pytest.fixture(scope="function")
 def sample_product() -> dict:
@@ -287,23 +277,32 @@ def sample_products() -> list[dict]:
 # FIXTURES PARA TELEGRAM (MOCK)
 # ============================================================================
 
+
 @pytest.fixture(scope="function")
 def mock_telegram_update():
     """Update do Telegram mockado."""
-    from telegram import Update, User, CallbackQuery
+    from telegram import Update, User
 
-    user = User(id=123456789, is_bot=False, first_name="Test User")
+    user = MagicMock(spec=User)
+    user.id = 123456789
+    user.is_bot = False
+    user.first_name = "Test User"
 
-    update = Update(update_id=1)
-    update._effective_user = user
+    # Mock Update object completely
+    update = MagicMock(spec=Update)
+    update.update_id = 1
+    update.effective_user = user
 
     # Mock callback query
     callback_query = MagicMock()
     callback_query.data = "menu"
     callback_query.from_user = user
     callback_query.answer = AsyncMock()
+    callback_query.edit_message_text = AsyncMock()
 
     update.callback_query = callback_query
+    # Default message to None (callback case)
+    update.message = None
 
     return update
 
@@ -311,7 +310,6 @@ def mock_telegram_update():
 @pytest.fixture(scope="function")
 def mock_telegram_context(mock_shopee_client, db, curator):
     """Contexto do Telegram mockado."""
-    from telegram.ext import CallbackContext
 
     context = MagicMock()
     context.bot_data = {
@@ -328,6 +326,7 @@ def mock_telegram_context(mock_shopee_client, db, curator):
 # ============================================================================
 # ORQUESTRAÇÃO DE TESTES - MARCADORES E FILTROS
 # ============================================================================
+
 
 class TestClassifier:
     """Classifica e organiza testes para execução otimizada."""
@@ -355,6 +354,7 @@ class TestClassifier:
 
 def pytest_collection_modifyitems(config, items):
     """Modifica a coleção de testes para otimizar execução."""
+
     # Ordena por: smoke > unitários > lentos
     def sort_key(item):
         if TestClassifier.is_smoke_test(item):
@@ -372,10 +372,12 @@ def pytest_collection_modifyitems(config, items):
 # RELATÓRIOS PERSONALIZADOS
 # ============================================================================
 
+
 @pytest.fixture(autouse=True)
 def print_test_duration(request):
     """Imprime duração de cada teste para análise de performance."""
     import time
+
     start = time.time()
     yield
     duration = time.time() - start

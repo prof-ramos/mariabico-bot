@@ -2,25 +2,28 @@
 
 ## Metadata
 
-| Campo | Valor |
-|-------|-------|
-| **Autor** | Gabriel Ramos |
-| **Versão** | 1.0 |
-| **Status** | Planning |
-| **Criado em** | 13/01/2026 |
-| **Última atualização** | 13/01/2026 |
+| Campo    | Valor                      |
+|----------|----------------------------|
+| **Autor** | Gabriel Ramos              |
+| **Versão** | 1.0                        |
+| **Status** | Planning                   |
+| **Criado em** | 13/01/2026               |
+| **Última atualização** | 13/01/2026          |
 | **Domínio** | mariabicobot.proframos.com |
 | **Stack principal** | Python 3.12, python-telegram-bot v20+, SQLite, Docker |
 
 ### Histórico de Versões
-| Versão | Data | Mudanças | Autor |
-|--------|------|----------|-------|
-| 1.0 | 13/01/2026 | Versão inicial do PRD | Gabriel Ramos |
+
+| Versão | Data         | Mudanças                    | Autor         |
+|--------|--------------|-----------------------------|---------------|
+| 1.0    | 13/01/2026  | Versão inicial do PRD       | Gabriel Ramos |
 
 ***
 
 ## 1) Resumo Executivo
+
 Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
+
 1) Seleciona periodicamente produtos Shopee com melhor equilíbrio entre **comissão** e **preço atrativo ao cliente** (desconto/valor), usando a Shopee Affiliate GraphQL API.
 2) Publica no **grupo privado** do Telegram uma mensagem pronta para copiar/colar, contendo **título + preço + desconto + comissão estimada + link rastreável**.
 3) Disponibiliza um fluxo manual via botão/comando: o usuário envia um link de produto e o bot retorna o **short link rastreável** (com subIds padronizados).
@@ -36,6 +39,7 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 ## 2) Objetivos e Métricas de Sucesso
 
 ### Objetivos de Negócio
+
 - **Eficiência**: Reduzir tempo de curadoria manual de 120min para 5min/dia
 - **Qualidade**: Garantir 100% dos produtos publicados possuem comissão >= 8% e desconto >= 15%
 - **Rastreabilidade**: 100% dos links com subIds padronizados por canal/campanha/lote
@@ -43,16 +47,17 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 
 ### Métricas SMART (Success Metrics)
 
-| Métrica | Target | Medição | Frequência |
-|---------|--------|---------|------------|
-| **API Success Rate** | >= 99% | Rolling window 7 dias | Diária |
-| **Curadoria Execution Time** | < 60s (p95) | Para lote de 200 itens | Por execução |
-| **Link Generation Success** | 100% | Produtos aprovados com short link | Por execução |
-| **Deduplication Accuracy** | 0 duplicatas | Por batch/período configurado | Por execução |
-| **Time-to-Market** | < 5min | Da execução até publicação no grupo | Por curadoria |
-| **Sistema Uptime** | >= 99.5% | Container health status | Semanal |
+| Métrica                    | Target     | Medição                  | Frequência |
+|----------------------------|------------|--------------------------|------------|
+| **API Success Rate**       | >= 99%    | Rolling window 7 dias    | Diária     |
+| **Curadoria Execution Time**| < 60s (p95)| Para lote de 200 itens   | Por execução |
+| **Link Generation Success** | 100%      | Produtos aprovados com short link | Por execução |
+| **Deduplication Accuracy**  | 0 duplicatas | Por batch/período configurado | Por execução |
+| **Time-to-Market**         | < 5min    | Da execução até publicação no grupo | Por curadoria |
+| **Sistema Uptime**         | >= 99.5%  | Container health status  | Semanal    |
 
 ### Métricas Operacionais (Logs)
+
 - Total de itens fetched por execução
 - Taxa de aprovação (itens aprovados / itens fetched)
 - Latência média da API Shopee
@@ -65,32 +70,38 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 ### Persona Primária: Afiliado Solo (Gabriel Ramos)
 
 **Background**
+
 - Coordenador Administrativo e Professor
 - Afiliado Shopee em tempo parcial
 - Gerencia divulgação em grupos Telegram privados
 
 **Contexto de Uso**
+
 - **Quando**: Período noturno (20h-22h) para preparar posts do dia seguinte
 - **Onde**: MacBook M3, acesso via Telegram Desktop/Mobile
 - **Frequência**: 2-3x por dia (manhã, tarde, noite)
 
 **Necessidades**
+
 - Curadoria rápida sem análise manual produto por produto
 - Links rastreáveis automáticos para medir performance por campanha
 - Mensagens prontas para copy/paste em múltiplos canais
 
 **Pain Points Atuais**
+
 - 2h diárias navegando manualmente no painel Shopee Affiliate
 - Risco de esquecer de adicionar subIds nos links
 - Dificuldade em identificar quais produtos já foram divulgados
 - Formatação manual inconsistente das mensagens
 
 **Expectativas**
+
 - "Quero acordar e ver produtos já curados prontos para publicar"
 - "Preciso saber exatamente qual campanha gerou cada conversão"
 - "Links devem funcionar 100% e serem curtos para WhatsApp/SMS também"
 
 ### Permissões
+
 - **Admin único**: Seu `telegram_user_id` (allowlist hardcoded)
 - Bot só responde a:
   - Comandos diretos (DM) do admin
@@ -103,6 +114,7 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 ### In Scope (MVP - Fase 1)
 
 #### ✅ Curadoria Automática
+
 - Busca via `productOfferV2` com keywords/categorias configuráveis
 - Rankeamento local por score (comissão + desconto - preço)
 - Geração de short links com subIds padronizados
@@ -110,17 +122,20 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 - Agendamento via APScheduler (6h/12h/24h configurável)
 
 #### ✅ Conversão Manual
+
 - Interface com botões inline (InlineKeyboardMarkup)
 - Validação e normalização de URLs Shopee
 - Geração de short link on-demand
 - Texto formatado pronto para copiar
 
 #### ✅ Persistência
+
 - SQLite para histórico, links, configurações
 - Deduplicação por `itemId` + período configurável
 - Logs de execução e auditoria
 
 #### ✅ Deploy
+
 - Docker + Portainer Stack
 - Network `ProfRamosNet` + Traefik ready
 - Secrets via environment variables
@@ -129,6 +144,7 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 ### Out of Scope
 
 #### ❌ Não será implementado (nunca ou fase 3+)
+
 - Suporte a múltiplos usuários/admins
 - Integração com outras plataformas de afiliados (Amazon, Mercado Livre)
 - Painel web de administração
@@ -137,6 +153,7 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 - Integração com CRM ou analytics externo
 
 #### 🔄 Fora do MVP (Fase 2)
+
 - Configuração dinâmica via comandos (editar keywords/thresholds no bot)
 - Coleta e análise de `conversionReport` + `validatedReport`
 - Webhook mode (MVP usa polling)
@@ -150,11 +167,13 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 ### RF-01: Curadoria Automática
 
 **User Story**
-> **Como** afiliado Shopee,  
-> **Quero** que o bot execute curadoria automaticamente a cada 12h,  
+
+> **Como** afiliado Shopee,
+> **Quero** que o bot execute curadoria automaticamente a cada 12h,
 > **Para que** eu sempre tenha produtos frescos sem intervenção manual.
 
 **Critérios de Aceitação**
+
 - ✅ Executa via APScheduler no intervalo configurado (default: 12h)
 - ✅ Consulta `productOfferV2` com parâmetros: keywords, categorias, limit/page
 - ✅ Aplica filtros mínimos: `commissionRate >= 8%`, `discount >= 15%`, `priceMax` (se configurado)
@@ -166,6 +185,7 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 - ✅ Deduplica: não reenvia `itemId` publicado nos últimos 7 dias
 
 **Parâmetros Configuráveis** (via `settings` table)
+
 ```json
 {
   "keywords": ["fone bluetooth", "smartwatch", "carregador rápido"],
@@ -196,11 +216,13 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 ### RF-02: Conversão Manual de Link
 
 **User Story**
-> **Como** afiliado,  
-> **Quero** converter um link Shopee específico em link rastreável,  
+
+> **Como** afiliado,
+> **Quero** converter um link Shopee específico em link rastreável,
 > **Para que** eu possa divulgar produtos encontrados fora do bot.
 
 **Critérios de Aceitação**
+
 - ✅ Comando `/converter` ou botão "Converter Link" ativa modo listening
 - ✅ Bot responde: "Envie o link do produto Shopee"
 - ✅ Valida URL (domínios: `shopee.com.br`, `shope.ee`)
@@ -212,6 +234,7 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 - ✅ Timeout de 60s se usuário não enviar link
 
 **Fluxo de Erro**
+
 - URL inválida: "❌ Link inválido. Envie um link Shopee válido."
 - Falha na API: "⚠️ Erro ao gerar link. Tente novamente em instantes."
 
@@ -220,11 +243,13 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 ### RF-03: Menu Principal e Navegação
 
 **User Story**
-> **Como** usuário admin,  
-> **Quero** acessar todas as funcionalidades via menu interativo,  
+
+> **Como** usuário admin,
+> **Quero** acessar todas as funcionalidades via menu interativo,
 > **Para que** eu não precise memorizar comandos.
 
 **Critérios de Aceitação**
+
 - ✅ Comando `/start` ou `/menu` exibe menu com botões inline
 - ✅ Botões: "🤖 Curadoria Agora", "🔗 Converter Link", "📊 Status", "⚙️ Ajuda"
 - ✅ Callback handlers para cada botão
@@ -236,11 +261,13 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 ### RF-04: Status e Monitoramento
 
 **User Story**
-> **Como** admin,  
-> **Quero** consultar o status das execuções,  
+
+> **Como** admin,
+> **Quero** consultar o status das execuções,
 > **Para que** eu possa verificar se tudo está funcionando corretamente.
 
 **Critérios de Aceitação**
+
 - ✅ Comando `/status` ou botão "📊 Status"
 - ✅ Retorna:
   - Última execução (data/hora)
@@ -252,6 +279,7 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
   - Uso de rate limit (requests/hora)
 
 **Exemplo de Resposta**
+
 ```
 📊 Status do MariaBicoBot
 
@@ -268,6 +296,7 @@ Desenvolver um bot no Telegram, em Python, para uso pessoal, que:
 ### RF-05: Geração de Short Link Rastreável
 
 **Regras de SubIds** (padronização obrigatória)
+
 ```python
 subIds = [
     "tg",                    # Canal: Telegram
@@ -279,6 +308,7 @@ subIds = [
 ```
 
 **Cache de Links**
+
 - Consultar tabela `links` por `origin_url` antes de chamar API
 - TTL: 30 dias (após isso, regerar)
 - Evita esgotar rate limit com produtos recorrentes
@@ -288,11 +318,13 @@ subIds = [
 ### RF-06: Formatação de Mensagens
 
 **User Story**
-> **Como** afiliado,  
-> **Quero** mensagens padronizadas e prontas para copiar,  
+
+> **Como** afiliado,
+> **Quero** mensagens padronizadas e prontas para copiar,
 > **Para que** eu mantenha consistência visual em todos os posts.
 
 **Template (HTML)**
+
 ```html
 🛒 <b>{productName}</b>
 
@@ -305,6 +337,7 @@ subIds = [
 ```
 
 **Mensagem Consolidada (Top N)**
+
 ```
 🤖 Curadoria MariaBicoBot
 📅 {date} às {time}
@@ -328,6 +361,7 @@ subIds = [
 **Comando**: `/start` ou `/menu`
 
 **Wireframe (Telegram)**
+
 ```
 ┌─────────────────────────────────────┐
 │  🤖 MariaBicoBot                    │
@@ -347,6 +381,7 @@ subIds = [
 ```
 
 **Código de Implementação**
+
 ```python
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
@@ -364,13 +399,13 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     text = (
         "🤖 <b>MariaBicoBot</b>\n"
         "Bot de Curadoria Shopee Afiliados\n\n"
         "Escolha uma opção:"
     )
-    
+
     await update.message.reply_text(
         text,
         reply_markup=reply_markup,
@@ -383,6 +418,7 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ### 6.2) Mensagem de Produto Individual
 
 **Wireframe (Telegram HTML)**
+
 ```
 ┌─────────────────────────────────────────────┐
 │ 🛒 Fone Bluetooth 5.3 TWS Pro XYZ          │
@@ -397,6 +433,7 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ```
 
 **Código de Implementação**
+
 ```python
 def format_product_message(product: dict, short_link: str) -> str:
     """Formata mensagem de produto individual"""
@@ -415,6 +452,7 @@ def format_product_message(product: dict, short_link: str) -> str:
 ### 6.3) Mensagem Consolidada (Top N)
 
 **Wireframe (Telegram HTML)**
+
 ```
 ┌──────────────────────────────────────────────┐
 │ 🤖 Curadoria MariaBicoBot                   │
@@ -444,6 +482,7 @@ def format_product_message(product: dict, short_link: str) -> str:
 ```
 
 **Código de Implementação**
+
 ```python
 async def send_curated_products(context: ContextTypes.DEFAULT_TYPE, products: list):
     """Envia lote consolidado de produtos"""
@@ -452,7 +491,7 @@ async def send_curated_products(context: ContextTypes.DEFAULT_TYPE, products: li
         f"📅 {datetime.now().strftime('%d/%m/%Y às %H:%M')}\n\n"
         f"🏆 Top {len(products)} Produtos Selecionados:\n"
     )
-    
+
     items = []
     for i, p in enumerate(products, 1):
         item = (
@@ -463,14 +502,14 @@ async def send_curated_products(context: ContextTypes.DEFAULT_TYPE, products: li
             f"🔗 {p['shortLink']}"
         )
         items.append(item)
-    
+
     footer = (
         f"\n\n📊 Avaliados: {context.bot_data['total_fetched']} | "
         f"Aprovados: {context.bot_data['total_approved']}"
     )
-    
+
     message = header + "".join(items) + footer
-    
+
     await context.bot.send_message(
         chat_id=TARGET_GROUP_ID,
         text=message,
@@ -484,6 +523,7 @@ async def send_curated_products(context: ContextTypes.DEFAULT_TYPE, products: li
 ### 6.4) Fluxo de Conversão Manual
 
 **Passo 1: Acionamento**
+
 ```
 ┌─────────────────────────────────────┐
 │  Você clicou em: 🔗 Converter Link  │
@@ -496,6 +536,7 @@ async def send_curated_products(context: ContextTypes.DEFAULT_TYPE, products: li
 ```
 
 **Passo 2: Processamento**
+
 ```
 ┌─────────────────────────────────────┐
 │  Você enviou:                       │
@@ -506,6 +547,7 @@ async def send_curated_products(context: ContextTypes.DEFAULT_TYPE, products: li
 ```
 
 **Passo 3: Resposta**
+
 ```
 ┌─────────────────────────────────────────────┐
 │ ✅ Link convertido com sucesso!            │
@@ -525,6 +567,7 @@ async def send_curated_products(context: ContextTypes.DEFAULT_TYPE, products: li
 ```
 
 **Código de Implementação**
+
 ```python
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
@@ -536,39 +579,40 @@ async def convert_link_start(update: Update, context: ContextTypes.DEFAULT_TYPE)
     """Inicia fluxo de conversão"""
     query = update.callback_query
     await query.answer()
-    
+
     await query.edit_message_text(
         "📎 <b>Converter Link</b>\n\n"
         "Envie o link do produto Shopee que deseja converter.\n\n"
         "⏱️ Aguardando link... (60s)",
         parse_mode="HTML"
     )
-    
+
     return AWAITING_LINK
 
 async def process_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Processa link enviado"""
     url = update.message.text.strip()
-    
+
     # Validação
     if not is_valid_shopee_url(url):
         await update.message.reply_text(
             "❌ Link inválido. Envie um link Shopee válido.\n\n"
-            "Exemplo: https://shopee.com.br/product/..."
+            "Exemplo: https://shopee.com.br/product/...",
+            parse_mode="HTML"
         )
         return AWAITING_LINK
-    
+
     # Indicador de processamento
     msg = await update.message.reply_text("⚙️ Gerando link rastreável...")
-    
+
     try:
         # Gera short link
         short_link = await generate_short_link(url, campaign="manual")
-        
+
         # Formata resposta
         keyboard = [[InlineKeyboardButton("🔙 Voltar ao Menu", callback_data="menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
+
         await msg.edit_text(
             "✅ <b>Link convertido com sucesso!</b>\n\n"
             f"🔗 {short_link}\n\n"
@@ -576,9 +620,9 @@ async def process_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML",
             reply_markup=reply_markup
         )
-        
+
         return ConversationHandler.END
-        
+
     except Exception as e:
         await msg.edit_text(
             "⚠️ <b>Erro ao gerar link</b>\n\n"
@@ -594,6 +638,7 @@ async def process_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ### 6.5) Status Dashboard
 
 **Wireframe**
+
 ```
 ┌──────────────────────────────────────────────┐
 │ 📊 Status do MariaBicoBot                   │
@@ -630,19 +675,20 @@ async def process_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ```
 
 **Código de Implementação**
+
 ```python
 async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Exibe status do sistema"""
     query = update.callback_query
     await query.answer()
-    
+
     # Busca dados
     stats = get_system_stats()
     last_run = get_last_run()
     next_run = get_next_scheduled_run()
     rate_limit = get_rate_limit_usage()
     db_stats = get_database_stats()
-    
+
     keyboard = [
         [
             InlineKeyboardButton("🔄 Atualizar", callback_data="status"),
@@ -650,35 +696,35 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     text = (
         "📊 <b>Status do MariaBicoBot</b>\n\n"
         f"{'✅' if stats['is_healthy'] else '⚠️'} Sistema {'operacional' if stats['is_healthy'] else 'com problemas'}\n"
         f"🕐 Uptime: {stats['uptime']}\n\n"
-        
+
         "📦 <b>Última Curadoria</b>\n"
         f"• Data: {last_run['timestamp']}\n"
         f"• Avaliados: {last_run['fetched']} produtos\n"
         f"• Aprovados: {last_run['approved']} produtos\n"
         f"• Enviados: {last_run['sent']} produtos\n"
         f"• Taxa sucesso: {last_run['success_rate']}%\n\n"
-        
+
         "⏭️ <b>Próxima Execução</b>\n"
         f"• Agendada para: {next_run['scheduled_at']}\n"
         f"• Tipo: {next_run['type']}\n\n"
-        
+
         "⚡ <b>Rate Limit API Shopee</b>\n"
         f"• Usado: {rate_limit['used']} / 2000 req/h\n"
         f"• Disponível: {rate_limit['available']} req/h\n\n"
-        
+
         "💾 <b>Banco de Dados</b>\n"
         f"• Produtos únicos: {db_stats['unique_products']:,}\n"
         f"• Links gerados: {db_stats['total_links']:,}\n"
         f"• Envios realizados: {db_stats['total_sent']:,}\n\n"
-        
+
         f"⚠️ Erros (últimas 24h): {stats['errors_24h']}"
     )
-    
+
     await query.edit_message_text(
         text,
         parse_mode="HTML",
@@ -693,16 +739,19 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ### Segurança (NFR-SEC)
 
 **NFR-SEC-01: Secrets Management**
+
 - Todas as credenciais via variáveis de ambiente
 - Nunca hardcode: `TELEGRAM_BOT_TOKEN`, `SHOPEE_APP_ID`, `SHOPEE_SECRET`
 - `.env` no `.dockerignore` e `.gitignore`
 
 **NFR-SEC-02: Access Control**
+
 - Allowlist hardcoded: `ADMIN_TELEGRAM_USER_ID`
 - Bot ignora silenciosamente mensagens de usuários não autorizados
 - Logs não devem expor `user_id` de requisições rejeitadas
 
 **NFR-SEC-03: Input Sanitization**
+
 - Validação rígida de URLs (regex + domínio)
 - Limites de tamanho: URLs < 2048 chars
 - Escape de HTML em mensagens user-generated
@@ -712,16 +761,19 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ### Confiabilidade (NFR-REL)
 
 **NFR-REL-01: Retry Logic**
+
 - HTTP requests com retry exponential backoff (3 tentativas)
 - Delays: 1s, 2s, 4s
 - Timeout por request: 10s
 
 **NFR-REL-02: Rate Limit Handling**
+
 - Cache de short links por `origin_url` (TTL: 30 dias)
 - Limite de pages por execução: `max_pages` (default: 5)
 - Monitoramento contínuo: `used_requests / 2000`
 
 **NFR-REL-03: Graceful Degradation**
+
 - Se API Shopee falhar, registrar erro e continuar execução
 - Se Telegram falhar, retry com backoff antes de desistir
 - Container health check: ping interno a cada 30s
@@ -731,15 +783,18 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ### Performance (NFR-PERF)
 
 **NFR-PERF-01: Execution Time**
+
 - Curadoria completa (200 itens): < 60s (p95)
 - Conversão manual: < 3s (p99)
 - Database queries: < 100ms (p99)
 
 **NFR-PERF-02: Memory Footprint**
+
 - Container max memory: 512MB
 - SQLite database: < 100MB (1 ano de operação)
 
 **NFR-PERF-03: Database Optimization**
+
 - Índices: `products_seen(item_id)`, `links(origin_url)`, `sent_messages(item_id, group_id)`
 - VACUUM automático: semanal
 
@@ -748,6 +803,7 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ### Observabilidade (NFR-OBS)
 
 **NFR-OBS-01: Structured Logging**
+
 - Formato JSON no stdout
 - Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
 - Campos obrigatórios: `timestamp`, `level`, `component`, `message`, `context`
@@ -768,10 +824,12 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ```
 
 **NFR-OBS-02: Métricas Expostas**
+
 - Contadores via logs (parseable pelo Portainer/Loki)
 - Métricas: `curations_total`, `products_fetched`, `products_approved`, `links_generated`, `errors_total`
 
 **NFR-OBS-03: Health Check**
+
 - Endpoint HTTP (opcional): `/health` retorna 200 se operacional
 - Ou: processo watchdog interno (check database + scheduler)
 
@@ -818,24 +876,28 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 ### Stack Tecnológico
 
-| Componente | Tecnologia | Versão | Justificativa |
-|------------|-----------|--------|---------------|
-| **Runtime** | Python | 3.12 | Async/await nativo, performance |
-| **Bot Framework** | python-telegram-bot | 20+ | Async, bem mantido, docs completas |
-| **HTTP Client** | httpx | latest | Async, HTTP/2, timeouts configuráveis |
-| **Scheduler** | APScheduler | latest | Cron-like, in-process, robusto |
-| **Database** | SQLite | 3.x | Zero-config, file-based, suficiente para uso |
-| **ORM** | sqlite3 (stdlib) | - | Simplicidade (SQLAlchemy se crescer) |
-| **Containerização** | Docker | latest | Portabilidade, Portainer-ready |
-| **Orquestração** | Portainer Stack | - | Já configurado no VPS |
-| **Reverse Proxy** | Traefik | - | Webhook futuro (TLS automático) |
+| Componente          | Tecnologia                  | Versão | Justificativa |
+|---------------------|-----------------------------|--------|---------------|
+| **Runtime**         | Python                      | 3.12   | Async/await nativo, performance |
+| **Bot Framework**   | python-telegram-bot         | 20+    | Async, bem mantido, docs completas |
+| **HTTP Client**     | httpx                       | latest | Async, HTTP/2, timeouts configuráveis |
+| **Scheduler**       | APScheduler                 | latest | Cron-like, in-process, robusto |
+| **Database**        | SQLite                      | 3.x    | Zero-config, file-based, suficiente para uso |
+| **ORM**             | sqlite3 (stdlib)            | -      | Simplicidade (SQLAlchemy se crescer) |
+| **Containerização** | Docker                      | latest | Portabilidade, Portainer-ready |
+| **Orquestração**    | Portainer Stack             | -      | Já configurado no VPS |
+| **Reverse Proxy**   | Traefik                     | -      | Webhook futuro (TLS automático) |
 
 ### Decisões Arquiteturais (ADR)
 
 #### ADR-001: Polling vs Webhook (MVP)
-**Decisão**: Polling  
-**Contexto**: MVP prioriza simplicidade; VPS já tem Traefik mas webhook exige configuração adicional  
-**Consequências**:  
+
+**Decisão**: Polling
+
+**Contexto**: MVP prioriza simplicidade; VPS já tem Traefik mas webhook exige configuração adicional
+
+**Consequências**:
+
 - ✅ Implementação mais simples
 - ✅ Sem necessidade de TLS setup para MVP
 - ✅ Mais robusto para reconexões
@@ -843,9 +905,13 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 - 🔄 Migrar para webhook na Fase 2
 
 #### ADR-002: SQLite vs PostgreSQL
-**Decisão**: SQLite  
-**Contexto**: Uso pessoal, estimativa < 10k registros/mês, VPS com recursos limitados  
-**Consequências**:  
+
+**Decisão**: SQLite
+
+**Contexto**: Uso pessoal, estimativa < 10k registros/mês, VPS com recursos limitados
+
+**Consequências**:
+
 - ✅ Zero dependências externas
 - ✅ Backup simples (copy file)
 - ✅ Queries rápidas para escala esperada
@@ -853,9 +919,13 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 - 🔄 Migrar para PostgreSQL se multi-instância
 
 #### ADR-003: Mensagem Consolidada vs Individual
-**Decisão**: Consolidada (1 mensagem com Top N)  
-**Contexto**: Evitar flood no grupo Telegram (rate limits + UX)  
-**Consequências**:  
+
+**Decisão**: Consolidada (1 mensagem com Top N)
+
+**Contexto**: Evitar flood no grupo Telegram (rate limits + UX)
+
+**Consequências**:
+
 - ✅ Reduz API calls do Telegram
 - ✅ Melhor UX (1 scroll vs 10 mensagens)
 - ✅ Facilita arquivamento/pesquisa
@@ -876,9 +946,11 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 └─────────────────┘       │ last_seen_at    │
                           │ last_price_min  │
                           │ last_discount   │
-         ┌────────────────┤ last_commission │
-         │                │ last_score      │
-         │                │ raw_json        │
+                          │ last_commission │
+                          │ last_score      │
+                          │ raw_json        │
+└─────────────────┘
+         ┌────────────────┤
          │                └─────────────────┘
          │                         │
          │                         │
@@ -978,18 +1050,21 @@ CREATE INDEX idx_runs_started ON runs(started_at DESC);
 ## 10) Integração Shopee Affiliate API
 
 ### Endpoint Base
-```
+
+```text
 https://open-api.affiliate.shopee.com.br/graphql
 ```
 
 ### Autenticação (SHA256 HMAC)
 
 **Header**:
-```
+
+```http
 Authorization: SHA256 Credential={AppId}, Timestamp={Timestamp}, Signature={Signature}
 ```
 
 **Cálculo da Signature**:
+
 ```python
 import hashlib
 
@@ -1000,11 +1075,13 @@ def generate_signature(app_id: str, secret: str, timestamp: int, payload: str) -
 ```
 
 **Validação de Timestamp**:
+
 - Timestamp em segundos (Unix epoch)
 - Tolerância: ±10 minutos
 - Erro 401 se fora da janela
 
 ### Rate Limits
+
 - **Limite global**: 2000 requests/hora
 - **Estratégia de mitigação**:
   - Cache de short links (30 dias TTL)
@@ -1014,6 +1091,7 @@ def generate_signature(app_id: str, secret: str, timestamp: int, payload: str) -
 ### Operação 1: productOfferV2
 
 **Query GraphQL**:
+
 ```graphql
 query ProductOfferV2($request: ProductSearchRequest!) {
   productOfferV2(request: $request) {
@@ -1042,6 +1120,7 @@ query ProductOfferV2($request: ProductSearchRequest!) {
 ```
 
 **Variables**:
+
 ```json
 {
   "request": {
@@ -1055,6 +1134,7 @@ query ProductOfferV2($request: ProductSearchRequest!) {
 ```
 
 **Campos Retornados** (relevantes):
+
 - `itemId` (int): ID único do produto
 - `productName` (str): Nome
 - `priceMin` (float): Preço mínimo (usar este para cálculos)
@@ -1066,6 +1146,7 @@ query ProductOfferV2($request: ProductSearchRequest!) {
 ### Operação 2: generateShortLink
 
 **Query GraphQL**:
+
 ```graphql
 mutation GenerateShortLink($request: GenerateShortLinkRequest!) {
   generateShortLink(request: $request) {
@@ -1079,6 +1160,7 @@ mutation GenerateShortLink($request: GenerateShortLinkRequest!) {
 ```
 
 **Variables**:
+
 ```json
 {
   "request": {
@@ -1089,6 +1171,7 @@ mutation GenerateShortLink($request: GenerateShortLinkRequest!) {
 ```
 
 **SubIds (limitações)**:
+
 - Máximo 5 strings
 - Cada string: max 255 chars
 - Caracteres permitidos: alphanumeric + `_` + `-`
@@ -1214,12 +1297,14 @@ Bot: Validação (regex + domínio)
 ## 12) Critérios de Aceitação (MVP)
 
 ### Critério 1: Menu Funcional
+
 - [ ] Comando `/start` exibe menu com 4 botões
 - [ ] Apenas admin pode acionar (allowlist)
 - [ ] Callbacks respondem corretamente
-- [ ] Mensagens de não-admin são ignoradas silenciosamente
+- [ ] Mensagens de usuários não autorizados são ignoradas silenciosamente
 
 ### Critério 2: Converter Link
+
 - [ ] Botão "Converter Link" ativa modo listening
 - [ ] Valida URL Shopee (domínios válidos)
 - [ ] Gera short link via API com subIds padronizados
@@ -1227,45 +1312,53 @@ Bot: Validação (regex + domínio)
 - [ ] Timeout de 60s se usuário não responder
 
 ### Critério 3: Curadoria Agora (Manual)
+
 - [ ] Botão "Curadoria Agora" executa rotina completa
 - [ ] Busca produtos, filtra, ranqueia
 - [ ] Envia Top N no grupo (1 mensagem consolidada)
 - [ ] Execução completa em < 60s (p95)
 
 ### Critério 4: Curadoria Automática (Agendada)
+
 - [ ] APScheduler roda no intervalo configurado (default: 12h)
 - [ ] Execução sem intervenção manual
 - [ ] Logs estruturados de início/fim/contadores
 - [ ] Deduplicação: zero duplicatas por período
 
 ### Critério 5: Persistência
+
 - [ ] SQLite persiste em volume Docker `/data`
 - [ ] Tabelas criadas automaticamente no primeiro boot
 - [ ] Queries indexed (< 100ms p99)
 - [ ] Backup manual: `docker cp container:/data/mariabico.db`
 
 ### Critério 6: Status
+
 - [ ] Comando `/status` retorna dashboard completo
 - [ ] Métricas corretas: última execução, contadores, rate limit
 - [ ] Botão "Atualizar" recarrega dados
 
 ### Critério 7: Observabilidade
+
 - [ ] Logs JSON no stdout (parseable pelo Portainer)
 - [ ] Campos obrigatórios: timestamp, level, component, message
 - [ ] Errors com stacktrace completo
 
 ### Critério 8: Deploy
+
 - [ ] Container sobe via Portainer Stack
 - [ ] Network `ProfRamosNet` configurada
 - [ ] Secrets via environment variables (não hardcoded)
 - [ ] Health check responde positivo
 
 ### Critério 9: Segurança
+
 - [ ] Allowlist implementada (admin_id)
 - [ ] Secrets nunca aparecem em logs
 - [ ] Input sanitization em URLs
 
 ### Critério 10: Rate Limit
+
 - [ ] Cache de short links funciona (evita chamadas duplicadas)
 - [ ] Execução não excede 2000 req/h
 - [ ] Retry com backoff em falhas transitórias
@@ -1323,31 +1416,31 @@ services:
     image: gabrielramos/mariabicobot:latest
     container_name: mariabicobot
     restart: unless-stopped
-    
+
     environment:
       # Telegram
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ADMIN_TELEGRAM_USER_ID=${ADMIN_TELEGRAM_USER_ID}
       - TARGET_GROUP_ID=${TARGET_GROUP_ID}
-      
+
       # Shopee
       - SHOPEE_APP_ID=${SHOPEE_APP_ID}
       - SHOPEE_SECRET=${SHOPEE_SECRET}
-      
+
       # Config
       - TZ=America/Sao_Paulo
       - LOG_LEVEL=INFO
       - DB_PATH=/data/mariabico.db
-      
+
       # Scheduler
       - SCHEDULE_CRON=0 */12 * * *
-    
+
     volumes:
       - mariabicobot_/data
-    
+
     networks:
       - ProfRamosNet
-    
+
     labels:
       # Traefik (webhook futuro)
       - "traefik.enable=false"  # MVP usa polling
@@ -1386,27 +1479,32 @@ LOG_LEVEL=INFO
 ### Deploy Workflow
 
 1. **Build local**:
+
 ```bash
 docker build -t gabrielramos/mariabicobot:latest .
 ```
 
 2. **Push para DockerHub**:
+
 ```bash
 docker push gabrielramos/mariabicobot:latest
 ```
 
 3. **Deploy via Portainer**:
+
    - Stacks → Add Stack → Name: `mariabicobot`
    - Copiar `docker-compose.yml`
    - Adicionar environment variables
    - Deploy
 
 4. **Verificar logs**:
+
 ```bash
 docker logs -f mariabicobot --tail 100
 ```
 
 5. **Backup database**:
+
 ```bash
 docker cp mariabicobot:/data/mariabico.db ./backup_$(date +%Y%m%d).db
 ```
@@ -1415,44 +1513,44 @@ docker cp mariabicobot:/data/mariabico.db ./backup_$(date +%Y%m%d).db
 
 ## 14) Dependências e Pré-requisitos
 
-| Dependência | Status | Ação Necessária | Responsável |
-|-------------|--------|-----------------|-------------|
-| **Shopee Affiliate API** | ✅ Obtido | Validar credenciais funcionam | Gabriel |
-| **Token Bot Telegram** | 🟡 Pendente | Criar via @BotFather | Gabriel |
-| **Grupo Privado Telegram** | 🟡 Pendente | Criar grupo + adicionar bot como admin | Gabriel |
-| **VPS com Portainer** | ✅ Configurado | - | Gabriel |
-| **Traefik no VPS** | ✅ Configurado | - (webhook Fase 2) | Gabriel |
-| **Domínio mariabicobot.proframos.com** | ✅ Apontado | - (webhook Fase 2) | Gabriel |
-| **DockerHub Account** | ✅ Existente | Criar repo `mariabicobot` | Gabriel |
+| Dependência                  | Status     | Ação Necessária                  | Responsável |
+|------------------------------|------------|----------------------------------|-------------|
+| **Shopee Affiliate API**     | ✅ Obtido | Validar credenciais funcionam    | Gabriel     |
+| **Token Bot Telegram**       | 🟡 Pendente| Criar via @BotFather            | Gabriel     |
+| **Grupo Privado Telegram**   | 🟡 Pendente| Criar grupo + adicionar bot como admin | Gabriel |
+| **VPS com Portainer**        | ✅ Configurado| -                            | Gabriel     |
+| **Traefik no VPS**           | ✅ Configurado| - (webhook Fase 2)             | Gabriel     |
+| **Domínio mariabicobot.proframos.com** | ✅ Apontado | - (webhook Fase 2)     | Gabriel     |
+| **DockerHub Account**        | ✅ Existente| Criar repo `mariabicobot`       | Gabriel     |
 
 ***
 
 ## 15) Riscos e Mitigações
 
-| Risco | Probabilidade | Impacto | Mitigação |
-|-------|---------------|---------|-----------|
-| **Mudança na API Shopee** | Média | Alto | Monitorar changelog oficial; versionar queries GraphQL; testes automatizados |
-| **Rate limit atingido** | Baixa | Médio | Cache de links (30d TTL); limitar pages/execução; alertar se > 90% usado |
-| **Campos inconsistentes** | Média | Baixo | Fallbacks: `priceMin` → `price`; validar tipos; logs de warning |
-| **Flood no grupo** | Baixa | Baixo | Mensagem consolidada (1 mensagem com Top N); máximo 15 itens por batch |
-| **Perda de dados SQLite** | Baixa | Alto | Backup automático semanal via cron; volume Docker persistente |
-| **Telegram Bot Token vazado** | Baixa | Crítico | Environment variables; `.env` no `.gitignore`; rotacionar se suspeita |
-| **VPS offline** | Baixa | Médio | Monitoramento externo (UptimeRobot); restart automático do container |
-| **Atribuição incorreta** | Média | Médio | SubIds padronizados; auditoria manual de conversões (Fase 2) |
+| Risco                          | Probabilidade | Impacto | Mitigação |
+|--------------------------------|---------------|---------|-----------|
+| **Mudança na API Shopee**      | Média        | Alto    | Monitorar changelog oficial; versionar queries GraphQL; testes automatizados |
+| **Rate limit atingido**        | Baixa        | Médio   | Cache de links (30d TTL); limitar pages/execução; alertar se > 90% usado |
+| **Campos inconsistentes**      | Média        | Baixo   | Fallbacks: `priceMin` → `price`; validar tipos; logs de warning |
+| **Flood no grupo**             | Baixa        | Baixo   | Mensagem consolidada (1 mensagem com Top N); máximo 15 itens por batch |
+| **Perda de dados SQLite**      | Baixa        | Alto    | Backup automático semanal via cron; volume Docker persistente |
+| **Telegram Bot Token vazado**  | Baixa        | Crítico | Environment variables; `.env` no `.gitignore`; rotacionar se suspeita |
+| **VPS offline**                | Baixa        | Médio   | Monitoramento externo (UptimeRobot); restart automático do container |
+| **Atribuição incorreta**       | Média        | Médio   | SubIds padronizados; auditoria manual de conversões (Fase 2) |
 
 ***
 
 ## 16) Open Questions
 
-| ID | Questão | Opções | Decisão | Data |
-|----|---------|--------|---------|------|
-| **OQ-01** | Frequência ideal de curadoria automática? | 6h / 12h / 24h | ⏳ Pendente | - |
-| **OQ-02** | Tamanho do Top N para envio? | 10 / 20 / 30 | ⏳ Pendente | - |
-| **OQ-03** | Período de deduplicação? | 7d / 14d / 30d | ⏳ Pendente | - |
-| **OQ-04** | Formato da mensagem: Markdown ou HTML? | MarkdownV2 / HTML | ✅ HTML | 13/01 |
-| **OQ-05** | Incluir imagem do produto na mensagem? | Sim / Não | ⏳ Pendente | - |
-| **OQ-06** | Backup automático: frequência? | Diário / Semanal | ⏳ Pendente | - |
-| **OQ-07** | Webhook na Fase 2: necessário? | Sim / Não | 🔄 Avaliar | - |
+| ID    | Questão                                    | Opções             | Decisão      | Data         |
+|-------|--------------------------------------------|--------------------|--------------|--------------|
+| **OQ-01** | Frequência ideal de curadoria automática? | 6h / 12h / 24h    | ⏳ Pendente | -            |
+| **OQ-02** | Tamanho do Top N para envio?              | 10 / 20 / 30       | ⏳ Pendente | -            |
+| **OQ-03** | Período de deduplicação?                  | 7d / 14d / 30d     | ⏳ Pendente | -            |
+| **OQ-04** | Formato da mensagem: Markdown ou HTML?    | MarkdownV2 / HTML  | ✅ HTML     | 13/01       |
+| **OQ-05** | Incluir imagem do produto na mensagem?    | Sim / Não          | ⏳ Pendente | -            |
+| **OQ-06** | Backup automático: frequência?            | Diário / Semanal   | ⏳ Pendente | -            |
+| **OQ-07** | Webhook na Fase 2: necessário?            | Sim / Não          | 🔄 Avaliar  | -            |
 
 ***
 
@@ -1461,6 +1559,7 @@ docker cp mariabicobot:/data/mariabico.db ./backup_$(date +%Y%m%d).db
 ### Fase 1 (MVP) — 2 semanas (27/01/2026)
 
 **Semana 1: Core + Infraestrutura** (13/01 - 19/01)
+
 - [x] PRD finalizado
 - [ ] Setup projeto (repo, Docker, CI básico)
 - [ ] Cliente Shopee API (auth + queries)
@@ -1469,6 +1568,7 @@ docker cp mariabicobot:/data/mariabico.db ./backup_$(date +%Y%m%d).db
 - [ ] Lógica de curadoria (fetch + filter + rank)
 
 **Semana 2: Integração + Deploy** (20/01 - 27/01)
+
 - [ ] Geração de short links + subIds
 - [ ] Formatação de mensagens
 - [ ] Deduplicação
@@ -1479,6 +1579,7 @@ docker cp mariabicobot:/data/mariabico.db ./backup_$(date +%Y%m%d).db
 - [ ] Documentação operacional
 
 ### Fase 2 (Configuração Dinâmica) — 4 semanas (03/02 - 02/03)
+
 - [ ] Comandos `/config` para editar keywords/thresholds
 - [ ] Interface inline para ajustar pesos do score
 - [ ] Integração com `conversionReport`
@@ -1487,6 +1588,7 @@ docker cp mariabicobot:/data/mariabico.db ./backup_$(date +%Y%m%d).db
 - [ ] Multi-grupos
 
 ### Fase 3 (Analytics Avançado) — Backlog
+
 - [ ] Feed público (JSON/HTML) para vitrine
 - [ ] Relatórios automáticos semanais/mensais
 - [ ] Predição de conversão via histórico
@@ -1497,18 +1599,18 @@ docker cp mariabicobot:/data/mariabico.db ./backup_$(date +%Y%m%d).db
 
 ## 18) Glossário
 
-| Termo | Definição |
-|-------|-----------|
-| **Affiliate Link** | Link rastreável que atribui conversões ao afiliado |
-| **SubIds** | Identificadores customizados no link (até 5) para rastreamento granular |
-| **Curadoria** | Processo de seleção automatizada de produtos por score |
-| **Rate Limit** | Limite de requisições por hora (Shopee: 2000/h) |
-| **Short Link** | URL encurtada gerada pela Shopee (`https://shope.ee/...`) |
-| **InlineKeyboard** | Botões interativos no Telegram (abaixo da mensagem) |
-| **Polling** | Método de receber updates do Telegram via long polling HTTP |
-| **Webhook** | Método de receber updates via POST HTTP reverso |
-| **TTL** | Time to Live - tempo de validade de um registro cached |
-| **Deduplicação** | Evitar reenviar o mesmo produto em período definido |
+| Termo               | Definição |
+|---------------------|-----------|
+| **Affiliate Link**  | Link rastreável que atribui conversões ao afiliado |
+| **SubIds**          | Identificadores customizados no link (até 5) para rastreamento granular |
+| **Curadoria**       | Processo de seleção automatizada de produtos por score |
+| **Rate Limit**      | Limite de requisições por hora (Shopee: 2000/h) |
+| **Short Link**      | URL encurtada gerada pela Shopee (`https://shope.ee/...`) |
+| **InlineKeyboard**  | Botões interativos no Telegram (abaixo da mensagem) |
+| **Polling**         | Método de receber updates do Telegram via long polling HTTP |
+| **Webhook**         | Método de receber updates via POST HTTP reverso |
+| **TTL**             | Time to Live - tempo de validade de um registro cached |
+| **Deduplicação**    | Evitar reenviar o mesmo produto em período definido |
 
 ***
 
@@ -1525,16 +1627,16 @@ docker cp mariabicobot:/data/mariabico.db ./backup_$(date +%Y%m%d).db
 
 ## 20) Aprovação
 
-| Papel | Nome | Assinatura | Data |
-|-------|------|------------|------|
-| **Product Owner** | Gabriel Ramos | ⏳ Pendente | - |
-| **Tech Lead** | Gabriel Ramos | ⏳ Pendente | - |
-| **Desenvolvedor** | Gabriel Ramos | ⏳ Pendente | - |
+| Papel               | Nome         | Assinatura  | Data  |
+|---------------------|--------------|-------------|-------|
+| **Product Owner**   | Gabriel Ramos| ⏳ Pendente | -     |
+| **Tech Lead**       | Gabriel Ramos| ⏳ Pendente | -     |
+| **Desenvolvedor**   | Gabriel Ramos| ⏳ Pendente | -     |
 
 ***
 
-**Versão**: 1.0  
-**Status**: Aguardando aprovação para início do desenvolvimento  
+**Versão**: 1.0
+**Status**: Aguardando aprovação para início do desenvolvimento
 **Última atualização**: 13/01/2026 14:30 BRT
 
 Fontes

@@ -1,7 +1,7 @@
 """Configurações e variáveis de ambiente do MariaBicoBot."""
+
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -57,12 +57,16 @@ class Settings:
         try:
             admin_user_id_int = int(admin_user_id)
         except ValueError:
-            raise ValueError(f"ADMIN_TELEGRAM_USER_ID deve ser um número inteiro válido: '{admin_user_id}'")
+            raise ValueError(
+                f"ADMIN_TELEGRAM_USER_ID deve ser um número inteiro válido: '{admin_user_id}'"
+            )
 
         try:
             target_group_id_int = int(target_group_id)
         except ValueError:
-            raise ValueError(f"TARGET_GROUP_ID deve ser um número inteiro válido: '{target_group_id}'")
+            raise ValueError(
+                f"TARGET_GROUP_ID deve ser um número inteiro válido: '{target_group_id}'"
+            )
 
         return cls(
             telegram_bot_token=telegram_bot_token,
@@ -90,7 +94,9 @@ class Settings:
         if not bot_id.isdigit():
             raise ValueError("TELEGRAM_BOT_TOKEN inválido: bot_id deve ser numérico")
         if len(secret) < 20:
-            raise ValueError("TELEGRAM_BOT_TOKEN inválido: secret muito curto (mínimo 20 caracteres)")
+            raise ValueError(
+                "TELEGRAM_BOT_TOKEN inválido: secret muito curto (mínimo 20 caracteres)"
+            )
 
         if self.admin_telegram_user_id <= 0:
             raise ValueError("ADMIN_TELEGRAM_USER_ID deve ser positivo")
@@ -106,7 +112,7 @@ class Settings:
 
 
 # Instância global de configurações
-settings: Optional[Settings] = None
+settings: Settings | None = None
 
 
 def get_settings() -> Settings:

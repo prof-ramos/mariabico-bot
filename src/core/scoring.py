@@ -1,7 +1,6 @@
 """Algoritmo de score para rankeamento de produtos."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 from src.utils.logger import get_logger
 
@@ -25,7 +24,7 @@ class FilterThresholds:
     commission_rate_min: float = 0.05  # 5% (antes 8%)
     commission_min_brl: float = 3.00  # R$ 3.00 (antes 5.00)
     discount_min_pct: int = 5  # 5% (antes 10%)
-    price_max_brl: Optional[float] = None  # Sem limite
+    price_max_brl: float | None = None  # Sem limite
     sales_min: int = 0
     rating_min: float = 0
 
@@ -44,7 +43,7 @@ def _get_commission(product: dict) -> float:
 
 def calculate_score(
     product: dict,
-    weights: Optional[ScoreWeights] = None,
+    weights: ScoreWeights | None = None,
 ) -> float:
     """Calcula o score de um produto."""
     weights = weights or ScoreWeights()
@@ -54,9 +53,7 @@ def calculate_score(
     price = product.get("priceMin", 0) or 0
 
     score = (
-        (commission * weights.commission)
-        + (discount * weights.discount)
-        - (price * weights.price)
+        (commission * weights.commission) + (discount * weights.discount) - (price * weights.price)
     )
 
     return round(score, 2)
@@ -64,7 +61,7 @@ def calculate_score(
 
 def passes_filters(
     product: dict,
-    thresholds: Optional[FilterThresholds] = None,
+    thresholds: FilterThresholds | None = None,
 ) -> bool:
     """Verifica se produto passa nos filtros mínimos."""
     thresholds = thresholds or FilterThresholds()
@@ -88,18 +85,14 @@ def passes_filters(
     # Desconto
     discount = product.get("priceDiscountRate", 0) or 0
     if discount < thresholds.discount_min_pct:
-        logger.debug(
-            f"Produto reprovado: discount {discount}% < {thresholds.discount_min_pct}%"
-        )
+        logger.debug(f"Produto reprovado: discount {discount}% < {thresholds.discount_min_pct}%")
         return False
 
     # Preço máximo (se configurado)
     price = product.get("priceMin", 0) or 0
     if thresholds.price_max_brl is not None:
         if price > thresholds.price_max_brl:
-            logger.debug(
-                f"Produto reprovado: price R${price} > R${thresholds.price_max_brl}"
-            )
+            logger.debug(f"Produto reprovado: price R${price} > R${thresholds.price_max_brl}")
             return False
 
     return True
@@ -107,7 +100,7 @@ def passes_filters(
 
 def rank_products(
     products: list[dict],
-    weights: Optional[ScoreWeights] = None,
+    weights: ScoreWeights | None = None,
 ) -> list[dict]:
     """Rankeia produtos por score."""
     weights = weights or ScoreWeights()
