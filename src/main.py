@@ -186,9 +186,17 @@ async def init_application() -> Application:
         weights=ScoreWeights(),  # TODO: configurável
     )
 
-    # Cria aplicação Telegram
+    # Cria aplicação Telegram com timeouts configurados
     logger.info("Inicializando bot Telegram...")
-    application = Application.builder().token(settings.telegram_bot_token).build()
+    application = (
+        Application.builder()
+        .token(settings.telegram_bot_token)
+        .connect_timeout(30.0)
+        .read_timeout(30.0)
+        .write_timeout(30.0)
+        .pool_timeout(30.0)
+        .build()
+    )
 
     # Armazena dependências no bot_data
     application.bot_data["db"] = db
