@@ -71,3 +71,9 @@ logs/
 
 # Claude
 .claude/
+
+# Debug / Temporary files
+*_debug.md
+task.md
+*.session
+docs.md
