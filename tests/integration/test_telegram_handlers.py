@@ -1,12 +1,15 @@
 """Testes de integração para handlers do bot Telegram."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from telegram import Update, User, CallbackQuery
 from telegram.ext import ConversationHandler
 
 from src.bot.handlers import (
     AWAITING_LINK,
+    convert_link_message,
     convert_link_start,
+    convert_link_timeout,
     curate_now_callback,
     help_callback,
     is_authorized,
@@ -27,7 +30,7 @@ class TestAuthorization:
         from src.config import reload_settings
 
         reload_settings()
-        authorized = await is_authorized(123456789)
+        authorized = is_authorized(123456789)
         assert authorized is True
 
     @pytest.mark.telegram
@@ -37,7 +40,7 @@ class TestAuthorization:
         from src.config import reload_settings
 
         reload_settings()
-        authorized = await is_authorized(999999999)
+        authorized = is_authorized(999999999)
         assert authorized is False
 
 
@@ -61,7 +64,7 @@ class TestMenuHandlers:
         # Verifica se respondeu
         mock_telegram_update.message.reply_text.assert_called_once()
         call_args = mock_telegram_update.message.reply_text.call_args
-        assert "MariaBicoBot" in call_args[0][0]
+        assert "MariaBico" in call_args[0][0]
 
     @pytest.mark.telegram
     @pytest.mark.asyncio
@@ -245,3 +248,72 @@ class TestConvertLinkHandlers:
         next_state = await convert_link_timeout(mock_telegram_update, mock_telegram_context)
 
         assert next_state == ConversationHandler.END
+
+
+class TestReportHandlers:
+    """Testes para handlers de relatório."""
+
+    @pytest.mark.telegram
+    @pytest.mark.asyncio
+    async def test_report_callback_success(self, mock_telegram_update, mock_telegram_context):
+        """Relatório gera dados corretamente."""
+        from src.bot.handlers import report_callback
+
+        # Mock Shopee response
+        shopee = mock_telegram_context.bot_data.get("shopee")
+        shopee.get_conversion_report = AsyncMock(
+            return_value={
+                "data": {
+                    "conversionReport": {
+                        "nodes": [
+                            {"commissionAmount": "10.50", "orderStatus": "PAID"},
+                            {"commissionAmount": "5.00", "orderStatus": "CANCELLED"},
+                        ]
+                    }
+                }
+            }
+        )
+
+        # Mock edit_text on message (used in _generate_report)
+        mock_telegram_update.callback_query.message = MagicMock()
+        mock_telegram_update.callback_query.message.edit_text = AsyncMock()
+
+        await report_callback(mock_telegram_update, mock_telegram_context)
+
+        # Verifica chamada inicial (loading)
+        mock_telegram_update.callback_query.edit_message_text.assert_called()
+
+        # Verifica chamada final (relatório) no message object
+        mock_telegram_update.callback_query.message.edit_text.assert_called()
+
+        calls = mock_telegram_update.callback_query.message.edit_text.call_args_list
+        last_call_args = calls[-1][0]
+        text_sent = last_call_args[0]
+
+        # Permite tanto '.' quanto ',' como separador decimal
+        assert "Relatório de Comissões" in text_sent
+        assert "15.50" in text_sent or "15,50" in text_sent
+
+    @pytest.mark.telegram
+    @pytest.mark.asyncio
+    async def test_report_command_success(self, mock_telegram_update, mock_telegram_context):
+        """Comando /relatorio funciona."""
+        from src.bot.handlers import report_command
+
+        # Configura message
+        mock_telegram_update.callback_query = None
+        mock_telegram_update.message = MagicMock()
+        mock_telegram_update.message.reply_text = AsyncMock(return_value=MagicMock())
+        # O retorno de reply_text é `msg`, que usa edit_text
+        mock_telegram_update.message.reply_text.return_value.edit_text = AsyncMock()
+        mock_telegram_update.effective_user.id = 123456789
+
+        # Mock Shopee
+        shopee = mock_telegram_context.bot_data.get("shopee")
+        shopee.get_conversion_report = AsyncMock(
+            return_value={"data": {"conversionReport": {"nodes": []}}}
+        )
+
+        await report_command(mock_telegram_update, mock_telegram_context)
+
+        mock_telegram_update.message.reply_text.assert_called()

@@ -2,23 +2,31 @@
 
 import json
 
-# Query para buscar produtos (productOfferV2)
-# Mantemos variáveis aqui pois types básicos (String, Int) são conhecidos e funcionaram
+# Query para busca detalhada de produtos
 PRODUCT_OFFER_V2_QUERY = """
-query ($keyword: String, $sortType: Int, $page: Int, $limit: Int) {
-  productOfferV2(keyword: $keyword, sortType: $sortType, page: $page, limit: $limit) {
+query ($keyword: String, $page: Int, $limit: Int, $categoryId: Int64, $shopId: Int64, $listType: Int, $sortType: Int) {
+  productOfferV2(
+    keyword: $keyword
+    productCatId: $categoryId
+    shopId: $shopId
+    matchId: $shopId
+    listType: $listType
+    sortType: $sortType
+    page: $page
+    limit: $limit
+  ) {
     nodes {
       itemId
       productName
-      productLink
-      priceMin
-      priceDiscountRate
       commissionRate
       commission
+      priceMin
+      priceMax
       sales
       ratingStar
       imageUrl
       offerLink
+      shopName
     }
     pageInfo {
       page
@@ -30,22 +38,91 @@ query ($keyword: String, $sortType: Int, $page: Int, $limit: Int) {
 """
 
 
+# Query para relatórios de conversão
+CONVERSION_REPORT_QUERY = """
+query ($start: Int64!, $end: Int64!, $page: Int!, $limit: Int!, $scrollId: String) {
+  conversionReport(
+    purchaseTimeStart: $start
+    purchaseTimeEnd: $end
+    page: $page
+    limit: $limit
+    scrollId: $scrollId
+  ) {
+    nodes {
+      orderId
+      purchaseTime
+      commissionRate
+      commissionAmount
+      orderStatus
+      subIds
+      productName
+      itemPrice
+    }
+    pageInfo {
+      page
+      limit
+      hasNextPage
+      scrollId
+    }
+  }
+}
+"""
+
+# Query para relatórios validados (pagos)
+VALIDATED_REPORT_QUERY = """
+query ($start: Int64!, $end: Int64!, $page: Int!, $limit: Int!, $scrollId: String) {
+  validatedReport(
+    purchaseTimeStart: $start
+    purchaseTimeEnd: $end
+    page: $page
+    limit: $limit
+    scrollId: $scrollId
+  ) {
+    nodes {
+      orderId
+      purchaseTime
+      commissionRate
+      commissionAmount
+      orderStatus
+      subIds
+      productName
+      itemPrice
+    }
+    pageInfo {
+      hasNextPage
+      scrollId
+    }
+  }
+}
+"""
+
+
 def build_product_offer_variables(
-    keywords: list[str],
+    keywords: list[str] | str,
     limit: int = 50,
     page: int = 1,
-    categories: list[int] | None = None,
-    sort_type: int = 2,
+    category_id: int | None = None,
+    shop_id: int | None = None,
+    list_type: int = 1,
+    sort_type: int = 5,
 ) -> dict:
     """Constrói variáveis para query productOfferV2."""
     keyword_str = " ".join(keywords) if isinstance(keywords, list) else keywords
 
-    return {
+    variables = {
         "keyword": keyword_str,
-        "sortType": sort_type,
         "page": page,
         "limit": limit,
+        "listType": list_type,
+        "sortType": sort_type,
     }
+
+    if category_id:
+        variables["categoryId"] = category_id
+    if shop_id:
+        variables["shopId"] = shop_id
+
+    return variables
 
 
 def get_short_link_query(origin_url: str, sub_ids: list[str]) -> str:

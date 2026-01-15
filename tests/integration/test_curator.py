@@ -1,8 +1,7 @@
 """Testes de integração para o Curator."""
 
 import pytest
-
-from src.core import Curator, FilterThresholds, ScoreWeights
+from unittest.mock import AsyncMock
 
 
 class TestCuratorIntegration:
@@ -14,7 +13,6 @@ class TestCuratorIntegration:
     async def test_curator_full_flow_with_mock(self, curator):
         """Testa fluxo completo de curadoria com cliente mockado."""
         # Mocka resposta da API
-        from src.shopee import ShopeeClient
 
         mock_products = [
             {
@@ -36,6 +34,7 @@ class TestCuratorIntegration:
         ]
 
         curator.shopee.search_products = AsyncMock(return_value=mock_products)
+        curator.max_pages = 1
 
         # Executa curadoria
         result = await curator.curate(
@@ -53,6 +52,8 @@ class TestCuratorIntegration:
     @pytest.mark.asyncio
     async def test_curator_multiple_keywords(self, curator):
         """Testa curadoria com múltiplas keywords."""
+        keywords = ["keyword1", "keyword2", "keyword3"]
+        curator.max_pages = 1
         mock_product = {
             "itemId": 123456,
             "productName": "Produto Teste",
@@ -70,12 +71,10 @@ class TestCuratorIntegration:
             "offerLink": "https://shope.ee/test",
         }
 
-        curator.shopee.search_products = AsyncMock(
-            return_value=[mock_product]
-        )
+        curator.shopee.search_products = AsyncMock(return_value=[mock_product])
 
         result = await curator.curate(
-            keywords=["keyword1", "keyword2", "keyword3"],
+            keywords=keywords,
             categories=None,
         )
 
@@ -122,9 +121,7 @@ class TestCuratorIntegration:
             "offerLink": "https://shope.ee/test",
         }
 
-        curator.shopee.search_products = AsyncMock(
-            return_value=[good_product, bad_product]
-        )
+        curator.shopee.search_products = AsyncMock(return_value=[good_product, bad_product])
 
         result = await curator.curate(
             keywords=["test"],
@@ -155,6 +152,9 @@ class TestCuratorIntegration:
             "productLink": "https://shopee.com.br/test",
             "offerLink": "https://shope.ee/test",
         }
+
+        # Insere produto no banco (necessário por FK)
+        db.upsert_product(curator._normalize_offer(product))
 
         # Marca produto como enviado
         db.mark_as_sent(999999, "-1001234567890", "https://test.link", "batch1")

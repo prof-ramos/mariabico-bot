@@ -1,4 +1,5 @@
 """Formatação de mensagens do bot."""
+
 from datetime import datetime
 
 
@@ -62,8 +63,7 @@ def format_consolidated_message(products: list, context: dict) -> str:
         items.append(item)
 
     footer = (
-        f"\n\n📊 Avaliados: {context.get('fetched', 0)} | "
-        f"Aprovados: {context.get('approved', 0)}"
+        f"\n\n📊 Avaliados: {context.get('fetched', 0)} | Aprovados: {context.get('approved', 0)}"
     )
 
     return header + "".join(items) + footer
@@ -146,4 +146,35 @@ def format_help_message() -> str:
         "• Links rastreáveis com subIds\n"
         "• Deduplicação de produtos\n"
         "• Rankeamento por score"
+    )
+
+
+def format_report_message(report_data: dict, period_days: int) -> str:
+    """Formata mensagem de relatório de comissões.
+
+    Args:
+        report_data: Dados agregados do relatório
+        period_days: Período em dias
+
+    Returns:
+        Mensagem formatada em HTML
+    """
+    # Coerção defensiva para valores None/falsy
+    total_orders = report_data.get("total_orders") or 0
+    total_commission = report_data.get("total_commission") or 0.0
+    paid_orders = report_data.get("paid_orders") or 0
+
+    # Conversões e taxas (evita divisão por zero)
+    conversion_rate = 0.0
+    if total_orders > 0:
+        conversion_rate = (paid_orders / total_orders) * 100
+
+    return (
+        f"💸 <b>Relatório de Comissões</b>\n"
+        f"📅 Últimos {period_days} dias\n\n"
+        f"💰 <b>Estimativa:</b> R$ {total_commission:.2f}\n"
+        f"📦 <b>Pedidos Totais:</b> {total_orders}\n"
+        f"✅ <b>Pedidos Pagos:</b> {paid_orders}\n"
+        f"📈 <b>Taxa Conversão:</b> {conversion_rate:.1f}%\n\n"
+        f"<i>* Valores estimados baseados na API de conversão.</i>"
     )

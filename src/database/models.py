@@ -3,7 +3,7 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from .schema import (
     SQL_INSERT_LINK,
@@ -15,10 +15,10 @@ from .schema import (
     SQL_SELECT_RUNS_STATS,
     SQL_SELECT_SENT_RECENT,
     SQL_SELECT_SETTINGS_BY_KEY,
-    SQL_UPSERT_PRODUCT_SEEN,
-    SQL_UPSERT_SETTING,
     SQL_UPDATE_LINK_LAST_USED,
     SQL_UPDATE_RUN_END,
+    SQL_UPSERT_PRODUCT_SEEN,
+    SQL_UPSERT_SETTING,
     SQL_VACUUM,
     get_connection,
 )
@@ -31,12 +31,12 @@ class ProductSeen:
     item_id: int
     first_seen_at: str
     last_seen_at: str
-    last_price_min: Optional[float] = None
-    last_discount_rate: Optional[int] = None
-    last_commission: Optional[float] = None
-    last_commission_rate: Optional[float] = None
-    last_score: Optional[float] = None
-    raw_json: Optional[str] = None
+    last_price_min: float | None = None
+    last_discount_rate: int | None = None
+    last_commission: float | None = None
+    last_commission_rate: float | None = None
+    last_score: float | None = None
+    raw_json: str | None = None
 
 
 @dataclass
@@ -48,7 +48,7 @@ class Link:
     short_link: str
     sub_ids_json: str
     created_at: str
-    last_used_at: Optional[str] = None
+    last_used_at: str | None = None
 
 
 @dataclass
@@ -60,7 +60,7 @@ class SentMessage:
     group_id: str
     short_link: str
     sent_at: str
-    batch_id: Optional[str] = None
+    batch_id: str | None = None
 
 
 @dataclass
@@ -70,11 +70,11 @@ class Run:
     id: int
     run_type: str
     started_at: str
-    ended_at: Optional[str] = None
+    ended_at: str | None = None
     items_fetched: int = 0
     items_approved: int = 0
     items_sent: int = 0
-    error_summary: Optional[str] = None
+    error_summary: str | None = None
     success: bool = True
 
 
@@ -88,7 +88,7 @@ class Database:
             db_path: Caminho para o arquivo SQLite
         """
         self.db_path = db_path
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conn: sqlite3.Connection | None = None
 
     @property
     def conn(self) -> sqlite3.Connection:
@@ -104,7 +104,7 @@ class Database:
             self._conn = None
 
     # Settings
-    def get_setting(self, key: str) -> Optional[str]:
+    def get_setting(self, key: str) -> str | None:
         """Retorna uma configuração.
 
         Args:
@@ -151,7 +151,7 @@ class Database:
         )
         self.conn.commit()
 
-    def get_product(self, item_id: int) -> Optional[ProductSeen]:
+    def get_product(self, item_id: int) -> ProductSeen | None:
         """Retorna um produto visto.
 
         Args:
@@ -167,7 +167,7 @@ class Database:
         return None
 
     # Links
-    def get_cached_link(self, origin_url: str) -> Optional[Link]:
+    def get_cached_link(self, origin_url: str) -> Link | None:
         """Retorna um link em cache (se válido).
 
         Args:
@@ -277,7 +277,7 @@ class Database:
         items_fetched: int,
         items_approved: int,
         items_sent: int,
-        error_summary: Optional[str] = None,
+        error_summary: str | None = None,
         success: bool = True,
     ) -> None:
         """Finaliza uma execução.
@@ -303,7 +303,7 @@ class Database:
         )
         self.conn.commit()
 
-    def get_last_run(self) -> Optional[Run]:
+    def get_last_run(self) -> Run | None:
         """Retorna a última execução.
 
         Returns:

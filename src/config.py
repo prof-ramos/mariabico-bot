@@ -1,7 +1,6 @@
 """Configurações e variáveis de ambiente do MariaBicoBot."""
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -106,7 +105,7 @@ class Settings:
 
 
 # Instância global de configurações
-settings: Optional[Settings] = None
+settings: Settings | None = None
 
 
 def get_settings() -> Settings:

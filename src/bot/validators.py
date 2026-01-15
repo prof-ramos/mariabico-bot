@@ -3,7 +3,6 @@ import html
 import re
 from urllib.parse import urlparse
 
-
 # Padrão de URL Shopee válido
 SHOPEE_URL_PATTERN = re.compile(
     r"^(https?://)?(www\.)?(shopee\.com\.br|shope\.ee)/",

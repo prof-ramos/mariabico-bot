@@ -1,7 +1,6 @@
 """Handlers para comandos e callbacks do bot."""
 
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timedelta
 
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
@@ -9,21 +8,20 @@ from telegram.ext import ContextTypes, ConversationHandler
 from src.bot.formatters import (
     format_consolidated_message,
     format_help_message,
-    format_product_message,
+    format_report_message,
     format_status_message,
 )
 from src.bot.keyboards import (
     back_to_menu_keyboard,
-    CallbackData,
     main_menu_keyboard,
     status_keyboard,
 )
 from src.bot.validators import escape_html, is_valid_shopee_url, normalize_shopee_url
-from src.config import get_settings
 from src.core import Curator
 from src.database import Database
 from src.shopee import ShopeeClient
 from src.utils.logger import get_logger
+from src import config
 
 logger = get_logger("mariabicobot", "bot")
 
@@ -31,22 +29,14 @@ logger = get_logger("mariabicobot", "bot")
 AWAITING_LINK = 1
 
 
-async def is_authorized(user_id: int) -> bool:
-    """Verifica se usuário está autorizado.
+def is_authorized(user_id: int) -> bool:
+    """Verifica se o usuário é o administrador."""
+    settings = config.get_settings()
+    if str(user_id) == str(settings.admin_telegram_user_id):
+        return True
 
-    Args:
-        user_id: ID do usuário Telegram
-
-    Returns:
-        True se autorizado
-    """
-    settings = get_settings()
-    is_auth = user_id == settings.admin_telegram_user_id
-    if not is_auth:
-        logger.warning(
-            f"Unauthorized access attempt: {user_id} (Admin is {settings.admin_telegram_user_id})"
-        )
-    return is_auth
+    logger.warning(f"Acesso não autorizado: {user_id}")
+    return False
 
 
 async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -63,20 +53,13 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         f"Recebido {update.message.text} de {update.effective_user.id} no chat {update.effective_chat.id}"
     )
 
-    if not await is_authorized(update.effective_user.id):
+    user = update.effective_user
+    if not is_authorized(user.id):
         return
 
-    text = (
-        "🤖 <b>MariaBicoBot</b>\n"
-        "Bot de Curadoria Shopee Afiliados\n\n"
-        "Escolha uma opção:"
-    )
-
-    await update.message.reply_text(
-        text,
-        reply_markup=main_menu_keyboard(),
-        parse_mode="HTML",
-    )
+    keyboard = main_menu_keyboard()
+    msg = f"🤖 *Painel de Controle MariaBico*\n\nOlá, {user.first_name}! O que deseja fazer hoje?"
+    await update.message.reply_text(msg, reply_markup=keyboard, parse_mode="Markdown")
 
     logger.info(f"Usuário {update.effective_user.id} abriu o menu")
 
@@ -88,7 +71,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         update: Update do Telegram
         context: Contexto do bot
     """
-    if not update.message or not await is_authorized(update.effective_user.id):
+    if not update.message or not is_authorized(update.effective_user.id):
         return
 
     await update.message.reply_text(
@@ -106,16 +89,12 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         context: Contexto do bot
     """
     query = update.callback_query
-    if not query or not await is_authorized(query.from_user.id):
+    if not query or not is_authorized(query.from_user.id):
         return
 
     await query.answer()
 
-    text = (
-        "🤖 <b>MariaBicoBot</b>\n"
-        "Bot de Curadoria Shopee Afiliados\n\n"
-        "Escolha uma opção:"
-    )
+    text = "🤖 <b>MariaBicoBot</b>\nBot de Curadoria Shopee Afiliados\n\nEscolha uma opção:"
 
     await query.edit_message_text(
         text,
@@ -132,15 +111,13 @@ async def status_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         context: Contexto do bot
     """
     query = update.callback_query
-    if not query or not await is_authorized(query.from_user.id):
+    if not query or not is_authorized(query.from_user.id):
         return
 
     await query.answer()
 
     # Busca estatísticas
-    settings = get_settings()
     db: Database = context.bot_data.get("db")
-    shopee: ShopeeClient = context.bot_data.get("shopee")
 
     if not db:
         await query.edit_message_text("⚠️ Banco de dados não disponível")
@@ -180,9 +157,7 @@ async def status_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
 
 
-async def curate_now_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def curate_now_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Callback para botão de curadoria imediata.
 
     Args:
@@ -190,7 +165,7 @@ async def curate_now_callback(
         context: Contexto do bot
     """
     query = update.callback_query
-    if not query or not await is_authorized(query.from_user.id):
+    if not query or not is_authorized(query.from_user.id):
         return
 
     await query.answer()
@@ -200,12 +175,11 @@ async def curate_now_callback(
 
     # Executa curadoria
     try:
-        settings = get_settings()
+        settings = config.get_settings()
         db: Database = context.bot_data.get("db")
-        shopee: ShopeeClient = context.bot_data.get("shopee")
         curator: Curator = context.bot_data.get("curator")
 
-        if not all([db, shopee, curator]):
+        if not all([db, curator]):
             await query.edit_message_text("⚠️ Sistema não disponível")
             return
 
@@ -278,7 +252,7 @@ async def convert_link_start(update: Update, context: ContextTypes.DEFAULT_TYPE)
         Próximo estado da conversação
     """
     query = update.callback_query
-    if not query or not await is_authorized(query.from_user.id):
+    if not query or not is_authorized(query.from_user.id):
         return ConversationHandler.END
 
     await query.answer()
@@ -293,9 +267,7 @@ async def convert_link_start(update: Update, context: ContextTypes.DEFAULT_TYPE)
     return AWAITING_LINK
 
 
-async def convert_link_message(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> int:
+async def convert_link_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Processa link enviado pelo usuário.
 
     Args:
@@ -305,7 +277,7 @@ async def convert_link_message(
     Returns:
         Fim da conversação
     """
-    if not update.message or not await is_authorized(update.effective_user.id):
+    if not update.message or not is_authorized(update.effective_user.id):
         return ConversationHandler.END
 
     url = update.message.text.strip()
@@ -341,7 +313,6 @@ async def convert_link_message(
             # Gera novo link
             from src.core import build_sub_ids
 
-            settings = get_settings()
             timestamp = datetime.now().strftime("%Y%m%d_%H%M")
             sub_ids = build_sub_ids("manual", "default", timestamp, "")
 
@@ -352,9 +323,7 @@ async def convert_link_message(
         keyboard = back_to_menu_keyboard()
 
         await msg.edit_text(
-            f"✅ <b>Link convertido com sucesso!</b>\n\n"
-            f"🔗 {short_link}\n\n"
-            f"📋 Copie e compartilhe!",
+            f"✅ <b>Link convertido com sucesso!</b>\n\n🔗 {short_link}\n\n📋 Copie e compartilhe!",
             parse_mode="HTML",
             reply_markup=keyboard,
         )
@@ -375,9 +344,7 @@ async def convert_link_message(
     return ConversationHandler.END
 
 
-async def convert_link_timeout(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> int:
+async def convert_link_timeout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handler para timeout da conversação.
 
     Args:
@@ -395,6 +362,131 @@ async def convert_link_timeout(
     return ConversationHandler.END
 
 
+async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handler para comando /relatorio.
+
+    Args:
+        update: Update do Telegram
+        context: Contexto do bot
+    """
+    if not update.message or not is_authorized(update.effective_user.id):
+        return
+
+    msg = await update.message.reply_text("⏳ Buscando dados de comissões...")
+    await _generate_report(msg, context, is_callback=False)
+
+
+async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Callback para botão de relatório.
+
+    Args:
+        update: Update do Telegram
+        context: Contexto do bot
+    """
+    query = update.callback_query
+    if not query or not is_authorized(query.from_user.id):
+        return
+
+    await query.answer()
+    await query.edit_message_text("⏳ Buscando dados de comissões...")
+
+    await _generate_report(query.message, context, is_callback=True)
+
+
+async def _generate_report(message, context: ContextTypes.DEFAULT_TYPE, is_callback: bool) -> None:
+    """Gera e envia o relatório.
+
+    Args:
+        message: Objeto Message do Telegram para editar
+        context: Contexto do bot
+        is_callback: Se foi chamado via callback (afeta navegação)
+    """
+    try:
+        shopee: ShopeeClient = context.bot_data.get("shopee")
+        if not shopee:
+            await message.edit_text("⚠️ Sistema Shopee indisponível")
+            return
+
+        # Período: últimos 7 dias
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+
+        # Timestamps em segundos
+        start_ts = int(start_date.timestamp())
+        end_ts = int(end_date.timestamp())
+
+        # Busca dados com paginação
+        # Nota: A API retorna até 500 por chamada, implementamos loop para pegar todos
+        nodes = []
+        cursor = None
+        has_more = True
+
+        while has_more:
+            report = await shopee.get_conversion_report(
+                start_timestamp=start_ts, end_timestamp=end_ts, limit=500, cursor=cursor
+            )
+
+            batch_nodes = report.get("data", {}).get("conversionReport", {}).get("nodes", [])
+            nodes.extend(batch_nodes)
+
+            # Verifica se há mais dados
+            if len(batch_nodes) < 500:
+                has_more = False
+            else:
+                # Tenta obter cursor da última página
+                if len(batch_nodes) > 0:
+                    last_node = batch_nodes[-1]
+                    cursor = last_node.get("scrollId")
+                else:
+                    has_more = False
+
+        # Agrega dados em memória
+        total_orders = len(nodes)
+        total_commission = 0.0
+        paid_orders = 0
+
+        for node in nodes:
+            # Parsing robusto de commissionAmount
+            try:
+                comm_value = node.get("commissionAmount")
+                if comm_value is None or isinstance(comm_value, (list, dict)):
+                    comm = 0.0
+                elif isinstance(comm_value, (int, float)):
+                    comm = float(comm_value)
+                elif isinstance(comm_value, str):
+                    comm = float(comm_value)
+                else:
+                    comm = 0.0
+            except (ValueError, TypeError):
+                comm = 0.0
+
+            total_commission += comm
+
+            # Normaliza status com conjunto
+            status = node.get("orderStatus", "").upper()
+            if status in {"PAID", "COMPLETED"}:
+                paid_orders += 1
+
+        report_data = {
+            "total_orders": total_orders,
+            "total_commission": total_commission,
+            "paid_orders": paid_orders,
+        }
+
+        text = format_report_message(report_data, 7)
+
+        keyboard = back_to_menu_keyboard() if is_callback else main_menu_keyboard()
+
+        await message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório: {e}")
+        await message.edit_text(
+            f"❌ Erro ao gerar relatório: {escape_html(str(e))}",
+            reply_markup=back_to_menu_keyboard() if is_callback else None,
+        )
+
+
 async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Callback para botão de ajuda.
 
@@ -403,7 +495,7 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         context: Contexto do bot
     """
     query = update.callback_query
-    if not query or not await is_authorized(query.from_user.id):
+    if not query or not is_authorized(query.from_user.id):
         return
 
     await query.answer()

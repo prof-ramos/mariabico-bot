@@ -1,7 +1,8 @@
-from telethon import TelegramClient, events, types
-import os
-from dotenv import load_dotenv
 import asyncio
+import os
+
+from dotenv import load_dotenv
+from telethon import TelegramClient
 
 # Configurações do Telethon fornecidas pelo usuário
 API_ID = 29602137
@@ -27,7 +28,7 @@ async def main():
     print("⏳ Aguardando resposta do bot no privado...")
 
     response_msg = None
-    for i in range(10):
+    for _ in range(10):
         await asyncio.sleep(1)
         async for message in client.iter_messages(bot, limit=5):
             if message.sender_id == (await client.get_me()).id:

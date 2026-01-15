@@ -1,6 +1,5 @@
 """Schema SQL do MariaBicoBot."""
 import sqlite3
-from typing import Optional
 
 # SQL para criar as tabelas
 SQL_CREATE_SETTINGS = """

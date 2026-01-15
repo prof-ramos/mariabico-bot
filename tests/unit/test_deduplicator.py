@@ -31,7 +31,6 @@ class TestDeduplicator:
     @pytest.mark.unit
     def test_is_duplicate_sent_recently(self, db):
         """Produto enviado recentemente é duplicata."""
-        from datetime import datetime, timedelta
 
         dedup = Deduplicator(db, dedup_days=7)
         item_id = 123456
@@ -86,7 +85,6 @@ class TestDeduplicator:
     @pytest.mark.unit
     def test_filter_duplicates_removes_sent(self, db):
         """Remove produtos já enviados da lista."""
-        from datetime import datetime
 
         dedup = Deduplicator(db, dedup_days=7)
         group_id = "-1001234567890"
